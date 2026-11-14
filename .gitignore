@@ -186,6 +186,10 @@ site/~/
 
 # Temp emoji data files
 *.json
+# Compose generator inputs must survive a clean checkout; without these files
+# generateComposeData overwrites tracked Kotlin with an incomplete constants table.
+!srcs/compose/*.json
+!srcs/compose/compose/*.json
 !site/**/*.json
 !site/package.json
 !site/tsconfig.json
