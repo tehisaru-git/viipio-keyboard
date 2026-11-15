@@ -1,6 +1,14 @@
-# Contributing to CleverKeys 🤝
+# Contributing to Viipio keyboard
 
-Welcome to CleverKeys! We're excited that you want to contribute to the world's first privacy-first swipe keyboard. This guide will help you get started with contributing to our open-source project.
+Viipio is a language-neutral, offline Android keyboard. This experimental release currently supports Estonian (ET) and English (EN); its name does not limit future languages. For this fork, report bugs through the [Viipio bug template](https://github.com/tehisaru-git/viipio-keyboard/issues/new?template=bug_report.yml) or suggest improvements through the [feature template](https://github.com/tehisaru-git/viipio-keyboard/issues/new?template=feature_request.yml). Read the [current capabilities and limitations](README.md) and [quality gates](docs/development/viipio-quality-gates.md) before proposing changes. Never post unredacted keyboard diagnostics, personal text or credentials in a public issue.
+
+The older contributor guide below is retained for **upstream CleverKeys attribution and background**. Its repository URLs, feature inventory, commands and release procedures do not describe Viipio's active fork or current release channel.
+
+---
+
+## Historical upstream CleverKeys contributor guide (not current Viipio instructions)
+
+Welcome to the original CleverKeys project. The following upstream material is retained for reference only.
 
 ## 🌟 Ways to Contribute
 

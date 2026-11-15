@@ -83,5 +83,13 @@ class ViipioBrandingTest(unittest.TestCase):
         self.assertNotIn('onOpenStudy', source)
 
 
+    def test_github_templates_use_current_language_neutral_identity(self):
+        pr = (ROOT / '.github/pull_request_template.md').read_text()
+        bug = (ROOT / '.github/ISSUE_TEMPLATE/bug_report.yml').read_text()
+        self.assertIn('Viipio version', pr)
+        self.assertNotIn('CleverKeys Version', pr)
+        self.assertIn('Viipio keyboard', bug)
+        self.assertIn('e.g., v0.6.0', bug)
+
 if __name__ == '__main__':
     unittest.main()

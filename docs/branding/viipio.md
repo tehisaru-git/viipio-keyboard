@@ -1,6 +1,6 @@
 # Viipio keyboard · identity and UI guide
 
-**Displayed name:** `Viipio keyboard` (preserve this capitalization in the launcher, Android IME picker and setup). **Repository:** `tehisaru-git/viipio-keyboard`. **Android package ID:** `io.github.tehisaru.estonianswipe` — retain it and the original release certificate for in-place updates. Class and theme names inherited from the source are implementation details, not public identity. The name is user-selected; preliminary brand searches are not legal clearance.
+**Displayed name:** `Viipio keyboard` (preserve this capitalization in the launcher, Android IME picker and setup). **Repository:** `tehisaru-git/viipio-keyboard`. **Android package ID:** `io.github.tehisaru.estonianswipe` — a historical technical identifier that Obtainium can show under **App ID**, not a language-support claim. Retain it and the original release certificate for in-place updates. Obtainium offers a per-app **App Name** override, but that cannot change its App ID; a neutral package ID would require a separate Android app and explicit migration without automatic update or app-data transfer. Class and theme names inherited from the source are implementation details, not public identity. The name is user-selected; preliminary brand searches are not legal clearance.
 
 ## Mark
 

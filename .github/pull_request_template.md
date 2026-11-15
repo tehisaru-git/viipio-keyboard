@@ -40,9 +40,9 @@ Related to #
 <!-- Describe how you tested these changes -->
 
 **Test Device:**
-- Device: <!-- e.g., Pixel 7 Pro -->
+- Device: <!-- e.g., Pixel 8 -->
 - Android Version: <!-- e.g., Android 14 -->
-- CleverKeys Version: <!-- e.g., 1.0.0 -->
+- Viipio version: <!-- e.g., v0.6.0 -->
 
 **Test Scenarios:**
 - [ ] <!-- Test scenario 1 -->
@@ -56,12 +56,12 @@ Related to #
 
 ```bash
 # Commands run
-./gradlew test
-./gradlew lint
+python3 scripts/viipio-check.py quick
+python3 scripts/viipio-check.py targeted
 ```
 
-- [ ] All unit tests pass
-- [ ] All integration tests pass
+- [ ] Scoped tests pass; full-suite failures and baseline comparison are disclosed
+- [ ] Relevant installed-editor and privacy paths were checked (or gaps documented)
 - [ ] No new lint warnings
 - [ ] Build succeeds
 
@@ -89,7 +89,7 @@ Related to #
 <!-- CRITICAL: All privacy/security items must be checked -->
 
 - [ ] ✅ No network code added
-- [ ] ✅ No telemetry or analytics added
+- [ ] ✅ Any diagnostic changes use explicit, separate consent and exclude sensitive fields
 - [ ] ✅ No third-party SDKs added (except ONNX Runtime if needed)
 - [ ] ✅ All data processing remains local
 - [ ] ✅ No sensitive data logging
@@ -107,7 +107,7 @@ Related to #
 - [ ] I have made corresponding changes to the documentation
 - [ ] My changes generate no new warnings
 - [ ] I have added tests that prove my fix is effective or that my feature works
-- [ ] New and existing unit tests pass locally with my changes
+- [ ] Scoped tests pass and any inherited broad-suite failures are reported honestly
 - [ ] Any dependent changes have been merged and published
 
 ## Documentation
@@ -168,12 +168,12 @@ Related to #
 - Privacy-related changes require careful review
 
 **Questions?**
-- See [CONTRIBUTING.md](../CONTRIBUTING.md) for detailed guidelines
+- See the [Viipio contribution overview](../CONTRIBUTING.md) and [quality gates](../docs/development/viipio-quality-gates.md); the archived CleverKeys section is historical
 - Ask in PR comments if anything is unclear
-- Join discussions at [GitHub Discussions](https://github.com/OWNER/cleverkeys/discussions)
+- Check the [Viipio repository](https://github.com/tehisaru-git/viipio-keyboard) for current project links
 
 ---
 
-**Thank you for contributing to CleverKeys!** 🎉
+**Thank you for contributing to Viipio keyboard!** 🎉
 
 🧠 **Think Faster** • ⌨️ **Type Smarter** • 🔒 **Stay Private**
