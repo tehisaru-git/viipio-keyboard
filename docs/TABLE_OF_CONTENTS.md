@@ -6,10 +6,14 @@ Viipio is an experimental offline Android keyboard. Its name is language-neutral
 
 - [README](../README.md) — current install instructions, capabilities, limits and update compatibility.
 - [Viipio identity](branding/viipio.md) — name, artwork and branding guidance.
-- [v0.5.1 release verification](releases/v0.5.1.md) — latest update scope and remaining gaps.
+- [v0.6.0 release verification](releases/v0.6.0.md) — personal words, consented input evidence and limits.
+- [v0.6.0 GitHub release body](releases/v0.6.0-github.md) — experimental APK changes and prominent test warnings.
+- [v0.5.1 release verification](releases/v0.5.1.md) — previous update scope and remaining gaps.
 - [v0.5.0 release verification](releases/v0.5.0.md) — previous tested scope.
-- [Gboard feature map and Viipio milestones](plans/viipio-gboard-parity.md) — active IME versus inherited/dormant modules.
-- [Local swipe diagnostics](eval/local-swipe-diagnostics.md) — opt-in collection, exclusions, export and erasure. Diagnostics currently records eligible **Estonian** swipes only, even though the keyboard also types in English.
+- [Gboard research and prioritized Viipio backlog](plans/viipio-gboard-feature-backlog.md) — cited help pages, read-only emulator observations, acceptance gates and separately testable milestones.
+- [Earlier Gboard feature map](plans/viipio-gboard-parity.md) — historical version proposals and active-versus-inherited distinction; use the newer backlog for current priorities.
+- [Development quality gates](development/viipio-quality-gates.md) — measured bottlenecks, fast feedback, isolated Gradle checks and release criteria.
+- [Local input diagnostics](eval/local-swipe-diagnostics.md) — independently consented ET swipe, ET completed words and experimental ET/EN Viipio-owned input events added in v0.6.0, with exclusions, export and erasure.
 - [Estonian offline dictionary](specs/estonian-offline-dictionary.md) and [human-swipe research](eval/human-swipe-research.md) — lexicon provenance and outstanding accuracy evidence.
 
 ## Inherited documentation

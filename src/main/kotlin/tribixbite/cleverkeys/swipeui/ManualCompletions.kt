@@ -23,6 +23,14 @@ internal class ManualCompletions private constructor(
 
     fun clear() { offer = null; words = emptyList() }
 
+    /** Only known words suppress the explicit inline personal-word offer. */
+    fun contains(word: String, language: KeyboardLanguage): Boolean {
+        if (!ViipioPersonalWords.validWord(word)) return false
+        val personal = try { personalWords(language) } catch (_: Exception) { return true }
+        if (personal.any { it.equals(word, ignoreCase = true) }) return true
+        return indexes[language]?.contains(word) ?: true
+    }
+
     fun update(connection: InputConnection, info: EditorInfo, language: KeyboardLanguage): List<String> {
         clear()
         if (!allowed(info)) return words
@@ -105,6 +113,8 @@ internal class ManualCompletions private constructor(
         // lexicographic range and keep just three ranked entries while scanning it.
         private val top = HashMap<String, MutableList<String>>()
         private val alphabetic = ranked.withIndex().sortedBy { it.value }
+        private val exact = ranked.map { it.lowercase(Locale.ROOT) }.toHashSet()
+        fun contains(word: String): Boolean = word.lowercase(Locale.ROOT) in exact
         init {
             for (word in ranked) for (length in 1..minOf(3, word.length)) {
                 val bucket = top.getOrPut(word.substring(0, length)) { ArrayList(3) }

@@ -1,5 +1,17 @@
 # Changelog
 
+## Viipio keyboard v0.6.0 — experimental public test release
+
+- Added explicit per-language personal-word Add/Undo and separate default-OFF consents for Estonian swipe, verified manual-word and ET/EN input-event diagnostics.
+- Added editor-specific PIN, numeric, phone and date/time layouts; PIN fields do not record telemetry.
+- Fixed delayed Android selection callbacks after swipe Undo so a verified, immediately retyped correction can be linked in local JSONL; both Backspace and glide-delete paths were checked on the installed signed APK.
+- Tracked missing Compose, bigram and URL-rule generator/runtime JSON sources for a reproducible checkout.
+- **Known limit:** the broad JVM suite is red (5,591 tests; 41 failures, 13 skipped). Human-finger Pixel 8 accuracy and long-running diagnostic behavior remain unverified. See `docs/releases/v0.6.0.md` and the GitHub release for safety notes.
+
+---
+
+The entries below are retained **upstream CleverKeys history**, not claims that Viipio ships every upstream feature. Viipio GitHub releases use their own notes and versioned verification documents; inherited Fastlane/F-Droid files are not a Viipio distribution channel.
+
 All notable changes to CleverKeys will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),

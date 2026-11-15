@@ -104,6 +104,19 @@ class ManualCompletionsTest {
         assertThat(completions.update(field.connection, info(), KeyboardLanguage.ESTONIAN)).isEmpty()
     }
 
+    @Test fun dictionaryMembershipForInlineAddDoesNotLeakAcrossLanguages() {
+        val ownEt = mutableListOf("mhm")
+        val completions = ManualCompletions.fromEntries(et, en) { language ->
+            if (language == KeyboardLanguage.ESTONIAN) ownEt else emptyList()
+        }
+        assertThat(completions.contains("mhm", KeyboardLanguage.ESTONIAN)).isTrue()
+        assertThat(completions.contains("mhm", KeyboardLanguage.ENGLISH)).isFalse()
+        assertThat(completions.contains("Tere", KeyboardLanguage.ESTONIAN)).isTrue()
+        assertThat(completions.contains("mhmh", KeyboardLanguage.ESTONIAN)).isFalse()
+        ownEt.clear()
+        assertThat(completions.contains("mhm", KeyboardLanguage.ESTONIAN)).isFalse()
+    }
+
     @Test fun replacementSelectsOnlyVerifiedWordAndLeavesOtherWordsIntact() {
         val completions = ManualCompletions.fromEntries(et, en)
         val field = Field("tere ter rest", 8)

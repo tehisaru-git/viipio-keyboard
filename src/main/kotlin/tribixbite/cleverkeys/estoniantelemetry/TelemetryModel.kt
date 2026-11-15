@@ -14,9 +14,16 @@ data class SwipeTrace(
     val points: List<TelemetryPoint>, val geometry: TelemetryGeometry,
     val candidates: List<String>, val committed: String,
     val startedUptimeMs: Long, val committedUptimeMs: Long,
+    val decoderSource: SwipeDecoderSource? = null,
+    val candidateScores: List<Int>? = null,
 )
+enum class SwipeDecoderSource(val wireName: String) { CTC("ctc"), GEOMETRIC("geometric") }
 
-data class TelemetryStats(val enabled: Boolean, val swipes: Int, val finalized: Int, val corrections: Int)
+data class TelemetryStats(val enabled: Boolean, val swipes: Int, val finalized: Int,
+    val corrections: Int, val manualEnabled: Boolean = false, val manualWords: Int = 0,
+    val inputEnabled: Boolean = false, val inputEvents: Int = 0)
+/** Caller attests that the completed word was verified after Viipio key typing. */
+enum class ManualWordSource { VERIFIED_KEY_TYPED }
 
 /** Deliberately narrow: no editor contents, non-Estonian words, sensitive variations or private IME modes. */
 internal object TelemetryPolicy {
@@ -40,6 +47,9 @@ internal object TelemetryPolicy {
     fun trace(value: SwipeTrace): Boolean {
         if (!id(value.id) || !language(value.language) || !editor(value.editor) ||
             !word(value.committed) || value.candidates.size > 5 || value.candidates.any { !word(it) } ||
+            ((value.decoderSource == null) != (value.candidateScores == null)) ||
+            (value.candidateScores != null && (value.candidateScores.size != value.candidates.size ||
+                value.candidateScores.isEmpty() || value.candidateScores.any { it !in 0..1000 })) ||
             value.geometry.widthPx !in 1..4096 || value.geometry.heightPx !in 1..4096 ||
             value.geometry.keys.size > 100 || value.geometry.keys.any {
                 !word(it.label) || it.label.length != 1 || it.left < 0 || it.top < 0 ||

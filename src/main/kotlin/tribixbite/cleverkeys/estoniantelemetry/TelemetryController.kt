@@ -8,6 +8,8 @@ import java.io.File
 import java.io.OutputStream
 import java.io.RandomAccessFile
 import java.nio.charset.StandardCharsets
+import java.util.UUID
+import tribixbite.cleverkeys.BuildConfig
 
 /** Opt-in, local-only telemetry. Invoke on one serial worker, never on the IME main thread.
  * Every event is separately AES-GCM authenticated; only length framing and segment names are cleartext.
@@ -15,11 +17,13 @@ import java.nio.charset.StandardCharsets
  */
 class TelemetryController internal constructor(
     context: Context, internal val storeName: String, private val cipher: CipherBox,
+    private val replaySizeObserver: (Int) -> Unit = {},
 ) {
     constructor(context: Context) : this(context, "estonian-swipe", AndroidKeystoreBox("estonian-swipe-telemetry-v1"))
 
     companion object {
         const val MAX_SWIPES = 5_000
+        const val MAX_INPUT_EVENTS = 10_000
         const val MAX_BYTES = 48L * 1024 * 1024
         private const val SEGMENT_BYTES = 1024 * 1024L
         private const val MAX_EVENT_BYTES = 128 * 1024
@@ -31,16 +35,29 @@ class TelemetryController internal constructor(
     private val file = File(directory, "$storeName.segments")
     private val legacy = File(directory, "$storeName.aes")
     private val consent = File(directory, "$storeName.enabled")
+    private val manualConsent = File(directory, "$storeName.manual.enabled")
+    private val inputConsent = File(directory, "$storeName.input.enabled")
+    private val revoked = File(directory, "$storeName.revoked")
     private val clearing = File(directory, "$storeName.clearing")
     private val records = LinkedHashMap<String, JSONObject>()
     private val owners = HashMap<String, Long>()
+    private val manualRecords = LinkedHashMap<String, JSONObject>()
+    private val manualOwners = HashMap<String, Long>()
+    private val inputRecords = ArrayDeque<JSONObject>()
+    private val inputOwners = ArrayDeque<Long>()
     private var healthy = true
     var isEnabled: Boolean = false
+        private set
+    var isManualEnabled: Boolean = false
+        private set
+    var isInputEnabled: Boolean = false
         private set
 
     init {
         try {
-            check(!clearing.exists() && !legacy.exists()) { "Incomplete deletion or legacy store" }
+            check(!clearing.exists() && !revoked.exists() && !legacy.exists()) {
+                "Incomplete deletion, revoked consent, or legacy store"
+            }
             if (file.exists()) {
                 check(file.isDirectory)
                 val segments = segments()
@@ -49,16 +66,23 @@ class TelemetryController internal constructor(
                 trim()
             }
             isEnabled = consent.exists()
+            isManualEnabled = manualConsent.exists()
+            isInputEnabled = inputConsent.exists()
         } catch (_: Exception) {
             healthy = false
             isEnabled = false
+            isManualEnabled = false
+            isInputEnabled = false
             records.clear()
             owners.clear()
+            manualRecords.clear()
+            manualOwners.clear()
+            inputRecords.clear(); inputOwners.clear()
         }
     }
 
     @Synchronized fun enable(): Boolean {
-        if (!healthy || clearing.exists() || legacy.exists()) return false
+        if (!healthy || clearing.exists() || revoked.exists() || legacy.exists()) return false
         return try {
             cipher.seal(byteArrayOf()).fill(0)
             if (!consent.exists()) consent.writeText("1")
@@ -69,13 +93,101 @@ class TelemetryController internal constructor(
 
     @Synchronized fun disable(): Boolean {
         isEnabled = false
-        return !consent.exists() || consent.delete()
+        isManualEnabled = false
+        isInputEnabled = false
+        // Persist revocation BEFORE deleting either consent. A failed deletion must not
+        // resurrect collection when a new process sees an old consent marker.
+        val tombstoned = try {
+            RandomAccessFile(revoked, "rw").use { out ->
+                out.setLength(0)
+                out.writeByte(1)
+                out.fd.sync()
+            }
+            true
+        } catch (_: Exception) { false }
+        val swipeRemoved = runCatching { !consent.exists() || consent.delete() }.getOrDefault(false)
+        val manualRemoved = runCatching { !manualConsent.exists() || manualConsent.delete() }.getOrDefault(false)
+        val inputRemoved = runCatching { !inputConsent.exists() || inputConsent.delete() }.getOrDefault(false)
+        if (swipeRemoved && manualRemoved && inputRemoved) {
+            val cleared = !revoked.exists() || revoked.delete()
+            if (!tombstoned || !cleared) healthy = false
+            return tombstoned && cleared
+        }
+        healthy = false
+        return false // The durable tombstone, when writable, blocks collection on restart.
+    }
+
+    /** Independent affirmative opt-in; never turns on swipe collection. */
+    @Synchronized fun enableManual(): Boolean {
+        if (!healthy || clearing.exists() || revoked.exists() || legacy.exists()) return false
+        return try {
+            cipher.seal(byteArrayOf()).fill(0)
+            if (!manualConsent.exists()) manualConsent.writeText("1")
+            isManualEnabled = true
+            true
+        } catch (_: Exception) { isManualEnabled = false; false }
+    }
+
+    /** Third independent opt-in, OFF until explicitly enabled. */
+    @Synchronized fun enableInputEvents(): Boolean {
+        if (!healthy || clearing.exists() || revoked.exists() || legacy.exists()) return false
+        return try {
+            cipher.seal(byteArrayOf()).fill(0)
+            if (!inputConsent.exists()) inputConsent.writeText("1")
+            isInputEnabled = true
+            true
+        } catch (_: Exception) { isInputEnabled = false; false }
+    }
+
+    /** One encrypted frame and one fsync per validated batch. */
+    @Synchronized fun recordInputBatch(events: List<ViipioInputEvent>, editor: EditorInfo?, dropped: Long = 0): Boolean {
+        if (!isInputEnabled || !healthy || !TelemetryPolicy.editor(editor) ||
+            events.isEmpty() || events.size > 64 || dropped < 0 || dropped > 1_000_000_000 ||
+            events.any { !InputEventPolicy.valid(it) } ||
+            events.zipWithNext().any { (a, b) -> a.sessionId != b.sessionId ||
+                a.seq >= b.seq || a.relativeTimeMs > b.relativeTimeMs }) return false
+        val rows = JSONArray()
+        val now = System.currentTimeMillis()
+        events.forEach { e -> rows.put(JSONObject().put("schema", "viipio-input-v1")
+            .put("sessionId", e.sessionId).put("seq", e.seq).put("timeMs", e.relativeTimeMs)
+            .put("lang", e.language.lowercase(java.util.Locale.ROOT))
+            .put("kind", e.kind.wire).put("text", e.text).put("textLength", e.textLength)
+            .put("source", e.source.wire).put("outcome", e.outcome.wire).put("createdMs", now)) }
+        return append(JSONObject().put("type", "input-batch").put("rows", rows).put("dropped", dropped))
+    }
+
+    /** Caller must verify complete ET word readback from its own key taps. A direct undo
+     * link requires both consents and a same-field swipe with verified undo.
+     */
+    @Synchronized fun recordManualWord(
+        word: String, language: String, editor: EditorInfo?, source: ManualWordSource,
+        directUndoSwipeId: String? = null,
+    ): Boolean {
+        if (!isManualEnabled || !healthy || source != ManualWordSource.VERIFIED_KEY_TYPED ||
+            !TelemetryPolicy.language(language) || !TelemetryPolicy.word(word) ||
+            !TelemetryPolicy.editor(editor)) return false
+        val provenSwipeId = directUndoSwipeId?.takeIf { candidateId ->
+            val swipe = matchingRow(candidateId, "et", editor)
+            if (swipe == null || !swipe.optBoolean("undoObserved") ||
+                swipe.optString("finalWord") != word || swipe.has("deleted") ||
+                manualRecords.values.any { it.optString("swipeId") == candidateId }) false
+            else {
+                val corrections = swipe.getJSONArray("corrections")
+                corrections.length() > 0 && corrections.getJSONObject(corrections.length() - 1)
+                    .let { it.optString("kind") == "manual" && it.optString("to") == word }
+            }
+        }
+        val row = JSONObject().put("schema", "estonian-manual-v1")
+            .put("id", UUID.randomUUID().toString()).put("lang", "et")
+            .put("word", word).put("createdMs", System.currentTimeMillis())
+        if (provenSwipeId != null) row.put("swipeId", provenSwipeId)
+        return append(JSONObject().put("type", "manual").put("row", row))
     }
 
     @Synchronized fun recordSwipe(trace: SwipeTrace): Boolean {
         if (!isEnabled || !healthy || !TelemetryPolicy.trace(trace) || records.containsKey(trace.id)) return false
         val row = JSONObject().apply {
-            put("schema", "estonian-swipe-v1")
+            put("schema", if (trace.decoderSource == null) "estonian-swipe-v1" else "estonian-swipe-v2")
             put("id", trace.id)
             put("lang", "et")
             put("pkg", trace.editor!!.packageName)
@@ -93,6 +205,11 @@ class TelemetryController internal constructor(
             } })
             put("durationMs", trace.committedUptimeMs - trace.startedUptimeMs)
             put("candidates", JSONArray(trace.candidates))
+            if (trace.decoderSource != null && trace.candidateScores != null) {
+                put("decoder", trace.decoderSource.wireName)
+                put("candidateScores", JSONArray(trace.candidateScores))
+                put("appVersion", BuildConfig.VERSION_NAME)
+            }
             put("committed", trace.committed)
             put("corrections", JSONArray())
         }
@@ -139,7 +256,8 @@ class TelemetryController internal constructor(
         trim()
         val rows = records.values
         return TelemetryStats(isEnabled, rows.size, rows.count { it.has("finalWord") || it.has("deleted") },
-            rows.sumOf { it.getJSONArray("corrections").length() })
+            rows.sumOf { it.getJSONArray("corrections").length() }, isManualEnabled, manualRecords.size,
+            isInputEnabled, inputRecords.size)
     }
 
     @Synchronized fun exportJsonl(output: OutputStream) {
@@ -153,12 +271,26 @@ class TelemetryController internal constructor(
             output.write(exported.toString().toByteArray(StandardCharsets.UTF_8))
             output.write('\n'.code)
         }
+        manualRecords.values.forEach { stored ->
+            val exported = JSONObject(stored.toString())
+            exported.remove("createdMs")
+            output.write(exported.toString().toByteArray(StandardCharsets.UTF_8))
+            output.write('\n'.code)
+        }
+        inputRecords.forEach { stored ->
+            val exported = JSONObject(stored.toString())
+            exported.remove("createdMs")
+            output.write(exported.toString().toByteArray(StandardCharsets.UTF_8))
+            output.write('\n'.code)
+        }
         output.flush()
     }
 
     /** Tombstone first: failed deletion cannot silently resume collection after restart. */
     @Synchronized fun clear(): Boolean {
         isEnabled = false
+        isManualEnabled = false
+        isInputEnabled = false
         return try {
             if (!clearing.exists()) clearing.writeText("1")
             healthy = false
@@ -173,7 +305,10 @@ class TelemetryController internal constructor(
             check(clearing.delete())
             records.clear()
             owners.clear()
+            manualRecords.clear()
+            manualOwners.clear()
             healthy = true
+            inputRecords.clear(); inputOwners.clear()
             true
         } catch (_: Exception) { healthy = false; false }
     }
@@ -199,6 +334,21 @@ class TelemetryController internal constructor(
             val first = records.keys.first()
             records.remove(first)
             owners.remove(first)
+        }
+        val manuals = manualRecords.entries.iterator()
+        while (manuals.hasNext()) {
+            val row = manuals.next().value
+            if (now - row.optLong("createdMs", 0) !in 0L..RETENTION_MS) {
+                manualOwners.remove(row.getString("id")); manuals.remove()
+            }
+        }
+        while (manualRecords.size > MAX_SWIPES) {
+            val first = manualRecords.keys.first()
+            manualRecords.remove(first)
+            manualOwners.remove(first)
+        }
+        while (inputRecords.isNotEmpty() && now - inputRecords.first().optLong("createdMs", 0) !in 0L..RETENTION_MS) {
+            inputRecords.removeFirst(); inputOwners.removeFirst()
         }
     }
 
@@ -239,12 +389,71 @@ class TelemetryController internal constructor(
 
     private fun apply(event: JSONObject, sequence: Long) {
         when (event.getString("type")) {
+            "input-batch" -> {
+                val rows = event.getJSONArray("rows")
+                check(rows.length() in 1..64 && event.getLong("dropped") in 0..1_000_000_000)
+                for (i in 0 until rows.length()) {
+                    val row = rows.getJSONObject(i)
+                    check(row.getString("schema") == "viipio-input-v1" && row.length() == 11 &&
+                        row.getLong("createdMs") > 0 && TelemetryPolicy.id(row.getString("sessionId")) &&
+                        row.getLong("seq") in 1..1_000_000_000 && row.getLong("timeMs") in 0..86_400_000 &&
+                        row.getString("lang") in setOf("et", "et-ee", "en", "en-us", "en-gb") &&
+                        row.getString("kind") in InputEventKind.entries.map { it.wire } &&
+                        row.getString("source") in InputEventSource.entries.map { it.wire } &&
+                        row.getString("outcome") in InputEventOutcome.entries.map { it.wire } &&
+                        row.getInt("textLength") in 0..64)
+                    val parsed = ViipioInputEvent(row.getString("sessionId"), row.getLong("seq"),
+                        row.getLong("timeMs"), row.getString("lang"),
+                        InputEventKind.entries.first { it.wire == row.getString("kind") }, row.getString("text"),
+                        InputEventSource.entries.first { it.wire == row.getString("source") },
+                        InputEventOutcome.entries.first { it.wire == row.getString("outcome") }, row.getInt("textLength"))
+                    check(InputEventPolicy.valid(parsed))
+                    inputRecords.addLast(row); inputOwners.addLast(sequence)
+                    if (inputRecords.size > MAX_INPUT_EVENTS) {
+                        inputRecords.removeFirst(); inputOwners.removeFirst()
+                    }
+                }
+            }
+            "manual" -> {
+                val row = event.getJSONObject("row")
+                val id = row.getString("id")
+                check(row.getString("schema") == "estonian-manual-v1" &&
+                    TelemetryPolicy.id(id) && !manualRecords.containsKey(id) &&
+                    row.getString("lang") == "et" && TelemetryPolicy.word(row.getString("word")) &&
+                    row.getLong("createdMs") > 0 &&
+                    (!row.has("swipeId") || TelemetryPolicy.id(row.getString("swipeId"))) &&
+                    row.length() == (if (row.has("swipeId")) 6 else 5))
+                manualRecords[id] = row
+                manualOwners[id] = sequence
+                // Replay is bounded too: do not transiently hold the entire 48 MiB log.
+                if (manualRecords.size > MAX_SWIPES) {
+                    val oldest = manualRecords.keys.first()
+                    manualRecords.remove(oldest)
+                    manualOwners.remove(oldest)
+                }
+            }
             "swipe" -> {
                 val row = event.getJSONObject("row")
                 val id = row.getString("id")
-                check(TelemetryPolicy.id(id) && row.getString("schema") == "estonian-swipe-v1" && !records.containsKey(id))
+                val schema = row.getString("schema")
+                check(TelemetryPolicy.id(id) && schema in setOf("estonian-swipe-v1", "estonian-swipe-v2") &&
+                    !records.containsKey(id))
+                if (schema == "estonian-swipe-v2") {
+                    val candidates = row.getJSONArray("candidates")
+                    val scores = row.getJSONArray("candidateScores")
+                    check(row.getString("decoder") in SwipeDecoderSource.entries.map { it.wireName } &&
+                        row.getString("appVersion").length in 1..40 &&
+                        candidates.length() in 1..5 && scores.length() == candidates.length())
+                    for (i in 0 until scores.length()) check(scores.get(i) is Int && scores.getInt(i) in 0..1000)
+                }
+                if (records.size >= MAX_SWIPES) {
+                    val oldest = records.keys.first()
+                    records.remove(oldest)
+                    owners.remove(oldest)
+                }
                 records[id] = row
                 owners[id] = sequence
+                replaySizeObserver(records.size)
             }
             "undo" -> {
                 val row = records[event.getString("id")] ?: return
@@ -299,6 +508,14 @@ class TelemetryController internal constructor(
                     val entry = iterator.next()
                     if (entry.value == evicted) { records.remove(entry.key); iterator.remove() }
                 }
+                val manualIterator = manualOwners.entries.iterator()
+                while (manualIterator.hasNext()) {
+                    val entry = manualIterator.next()
+                    if (entry.value == evicted) { manualRecords.remove(entry.key); manualIterator.remove() }
+                }
+                while (inputOwners.isNotEmpty() && inputOwners.first() == evicted) {
+                    inputOwners.removeFirst(); inputRecords.removeFirst()
+                }
             }
             check(segments().sumOf { it.length() } + encrypted.size + 4 <= MAX_BYTES)
             // Append with one fsync. On an uncertain write failure, fail closed until explicit clear.
@@ -314,6 +531,8 @@ class TelemetryController internal constructor(
         } catch (_: Exception) {
             healthy = false
             isEnabled = false
+            isManualEnabled = false
+            isInputEnabled = false
             return false
         } finally { encrypted.fill(0) }
     }

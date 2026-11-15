@@ -144,8 +144,8 @@ dependencies {
 // =============================================================================
 // UPDATE ONLY THESE THREE VALUES FOR A NEW RELEASE:
 ext.VERSION_MAJOR = 0
-ext.VERSION_MINOR = 5
-ext.VERSION_PATCH = 1
+ext.VERSION_MINOR = 6
+ext.VERSION_PATCH = 0
 // =============================================================================
 // DERIVED VALUES (auto-calculated, do not edit):
 // - versionCode = MAJOR*10000 + MINOR*100 + PATCH
@@ -1358,6 +1358,38 @@ tasks.register('runMockTests', JavaExec) {
   jvmArgs '-XX:+EnableDynamicAgentLoading'
 
   def mockTestClasses = [
+    // Viipio's independent IME tests, including local v0.6.0 input evidence. Keep these
+    // in the explicit ARM64 runner as well as Gradle's discovered JVM suite.
+    'tribixbite.cleverkeys.EmojiKeywordIndexTypoTest',
+    'tribixbite.cleverkeys.EstonianSwipeServiceTest',
+    'tribixbite.cleverkeys.IndependentImeBoundaryTest',
+    'tribixbite.cleverkeys.IndependentSettingsBoundaryTest',
+    'tribixbite.cleverkeys.ManualTypingPolicyTest',
+    'tribixbite.cleverkeys.ViipioBehaviorPreferenceTest',
+    'tribixbite.cleverkeys.ViipioCorrectionEvidenceTest',
+    'tribixbite.cleverkeys.ViipioDoubleSpacePreferenceTest',
+    'tribixbite.cleverkeys.ViipioHoldDurationPreferenceTest',
+    'tribixbite.cleverkeys.ViipioInputEvidenceTest',
+    'tribixbite.cleverkeys.ViipioPersonalWordsTest',
+    'tribixbite.cleverkeys.ViipioSentenceCapitalPreferenceTest',
+    'tribixbite.cleverkeys.ViipioSpacingPreferenceTest',
+    'tribixbite.cleverkeys.ViipioTypedWordCaptureTest',
+    'tribixbite.cleverkeys.ViipioTypedWordTrackerTest',
+    'tribixbite.cleverkeys.estonianemoji.EmojiPanelViewTest',
+    'tribixbite.cleverkeys.estonianemoji.OfflineEmojiSearchTest',
+    'tribixbite.cleverkeys.estonianstudy.SwipeStudyActivityTest',
+    'tribixbite.cleverkeys.estonianstudy.SwipeStudySessionTest',
+    'tribixbite.cleverkeys.estoniantelemetry.InputEventsTest',
+    'tribixbite.cleverkeys.estoniantelemetry.InputFlushScheduleTest',
+    'tribixbite.cleverkeys.estoniantelemetry.TelemetryActivityTest',
+    'tribixbite.cleverkeys.estoniantelemetry.TelemetryControllerTest',
+    'tribixbite.cleverkeys.estonianui.KeyboardSurfaceTest',
+    'tribixbite.cleverkeys.estonianui.KeyboardSurfaceViewTest',
+    'tribixbite.cleverkeys.estonianui.LongPressOptionsTest',
+    'tribixbite.cleverkeys.swipe.ViipioPersonalLexiconMergeTest',
+    'tribixbite.cleverkeys.swipe.ctc.BundledEstonianDictionaryTest',
+    'tribixbite.cleverkeys.swipeui.ManualCompletionsTest',
+    'tribixbite.cleverkeys.swipeui.SwipeSuggestionSessionTest',
     // 2026-10-31: the licenses screen reads its texts through AssetManager (mocked over the
     // generated assets); a missing asset is reported, not thrown.
     'tribixbite.cleverkeys.legal.OpenSourceLicensesAssetReadTest',
@@ -1762,12 +1794,20 @@ tasks.register('runMockTests', JavaExec) {
       'android-classes-jar'
     )
   }.files
+  // The unit-test runtime includes AARs (notably androidx.test:monitor). JavaExec
+  // cannot load classes from an AAR directly; use AGP's extracted classes jars.
+  def unitTestDependencyClasses = configurations.debugUnitTestRuntimeClasspath.incoming.artifactView {
+    attributes.attribute(
+      org.gradle.api.attributes.Attribute.of('artifactType', String),
+      'android-classes-jar'
+    )
+  }.files
   classpath = files(
     "${buildDir}/intermediates/javac/debugUnitTest/classes",
     "${buildDir}/tmp/kotlin-classes/debugUnitTest",
     "${buildDir}/intermediates/javac/debug/classes",
     "${buildDir}/tmp/kotlin-classes/debug",
-  ) + configurations.debugUnitTestRuntimeClasspath + androidDependencyClasses + files(androidJar)
+  ) + configurations.debugUnitTestRuntimeClasspath + unitTestDependencyClasses + androidDependencyClasses + files(androidJar)
 
   if (project.hasProperty('testClass')) {
     def cls = project.property('testClass')
@@ -1812,6 +1852,15 @@ tasks.register('genEmojis') {
 
 tasks.withType(Test).configureEach {
   dependsOn 'genLayoutsList', 'checkKeyboardLayouts', 'generateComposeData'
+  // Opt-in for memory-bounded local full-suite checks. CI stays unchanged.
+  if (project.hasProperty('viipioTestForkEvery')) {
+    def count = project.property('viipioTestForkEvery').toString().toInteger()
+    if (count < 1 || count > 200) {
+      throw new GradleException('viipioTestForkEvery must be between 1 and 200')
+    }
+    forkEvery = count
+    maxParallelForks = 1
+  }
 }
 
 tasks.register('genLayoutsList') {

@@ -65,6 +65,25 @@ class ReleaseMetadataDriftTest {
 
     @Test
     fun releaseChannelsAgreeWithRuntimeCtcPolicy() {
+        // This source snapshot ships a separately signed Viipio APK, not the inherited
+        // CleverKeys/F-Droid release channel. Do not require new CleverKeys fastlane files
+        // or copy its thirteen-language claims into Viipio's ET/EN release notes.
+        if (buildGradle.readText().contains("applicationId \"io.github.tehisaru.estonianswipe\"")) {
+            val version = listOf("MAJOR", "MINOR", "PATCH")
+                .joinToString(".") { versionPart(it, buildGradle.readText()).toString() }
+            val note = File("docs/releases/v$version.md")
+            assertTrue("Viipio v$version must have its own release verification note", note.isFile)
+            val text = note.readText()
+            assertTrue("Viipio note must identify the tested APK version", text.contains("v$version"))
+            assertTrue("Viipio note must name its stable package ID", text.contains("io.github.tehisaru.estonianswipe"))
+            assertTrue("Viipio note must distinguish a local candidate from a public release",
+                text.contains("NOT published") || text.contains("Published GitHub Release"))
+            assertTrue("Viipio note must state the active input languages",
+                text.contains("Estonian (ET)") && text.contains("English (EN)"))
+            assertFalse("Do not claim inherited CleverKeys release channels for Viipio",
+                text.contains("en/fr/de/es validated"))
+            return
+        }
         for (file in releaseFiles) {
             assertTrue(
                 "${file.path} is missing — a version bump must ship fresh release notes for " +

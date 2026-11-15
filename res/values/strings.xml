@@ -51,6 +51,10 @@
     <string name="viipio_language_english" translatable="false">English (EN)</string>
     <string name="viipio_personal_word_label" translatable="false">Word (2–48 letters)</string>
     <string name="viipio_personal_word_add" translatable="false">Add word</string>
+    <string name="viipio_inline_word_add" translatable="false">Add %1$s to %2$s words</string>
+    <string name="viipio_inline_word_added" translatable="false">Added %1$s · Undo</string>
+    <string name="viipio_inline_word_dismiss" translatable="false">Dismiss word offer</string>
+    <string name="viipio_inline_word_unavailable" translatable="false">Could not save word</string>
     <string name="viipio_personal_word_remove" translatable="false">Remove %1$s</string>
     <string name="viipio_personal_words_empty" translatable="false">No personal words for this language yet</string>
     <string name="viipio_word_added" translatable="false">Word added</string>
@@ -74,12 +78,22 @@
     <string name="swipe_study_saved" translatable="false">Study JSON saved locally</string>
     <string name="swipe_study_save_failed" translatable="false">Could not save study JSON</string>
     <string name="telemetry_title" translatable="false">Swipe diagnostics</string>
-    <string name="telemetry_intro" translatable="false">Optional Estonian-only diagnostics. While ON, this keyboard stores swipe paths, suggested and inserted words, and corrections that it can verify, including words typed in normal chat fields. Private words may be included. Passwords, email addresses, URLs, number fields, incognito and no-learning fields are excluded. Data is encrypted on this device; nothing is uploaded. Export writes a readable file only after you choose a location. You can stop and erase it at any time.</string>
+    <string name="telemetry_intro" translatable="false">Optional, separately consented diagnostics. Swipe and manual-word streams cover Estonian; Viipio input events can cover Estonian and English confirmed keyboard actions. Personal text in ordinary apps may be included. Password, email, URL, numeric, incognito and no-learning fields are excluded. Data is encrypted here; nothing is uploaded. Export writes a readable file only after you choose a location. Stop or erase at any time.</string>
     <string name="telemetry_off" translatable="false">Collection: OFF · %1$d swipes · %2$d corrections</string>
     <string name="telemetry_on" translatable="false">Collection: ON · %1$d swipes · %2$d corrections</string>
     <string name="telemetry_unavailable" translatable="false">Collection unavailable. Check or clear encrypted data.</string>
     <string name="telemetry_start" translatable="false">Start local collection</string>
-    <string name="telemetry_stop" translatable="false">Stop collection</string>
+    <string name="telemetry_manual_off" translatable="false">Manual: OFF · %1$d verified words</string>
+    <string name="telemetry_input_off" translatable="false">Input events: OFF · %1$d retained events · loss total unavailable</string>
+    <string name="telemetry_input_on" translatable="false">Input events: ON · %1$d retained events · loss total unavailable</string>
+    <string name="telemetry_input_start" translatable="false">Start Viipio input events</string>
+    <string name="telemetry_input_consent_title" translatable="false">Store your Viipio input sequence?</string>
+    <string name="telemetry_input_consent_body" translatable="false">Separate consent, OFF by default. Stores confirmed keyboard-generated ET/EN commits, swipes, candidate replacements, deletions and language changes in ordinary fields. Text you type, including personal words, can appear in the encrypted log and in a plaintext file you choose to export. Never surrounding editor text, clipboard, app identities, passwords, email, URLs, numeric, private or no-learning fields. Stop or erase revokes all diagnostics consents.</string>
+    <string name="telemetry_manual_on" translatable="false">Manual: ON · %1$d verified words</string>
+    <string name="telemetry_manual_start" translatable="false">Start manual word diagnostics</string>
+    <string name="telemetry_manual_consent_title" translatable="false">Store completed words typed with Viipio keys?</string>
+    <string name="telemetry_manual_consent_body" translatable="false">Separate from swipe diagnostics and OFF by default. Only Estonian words fully typed with Viipio keys and verified at completion may be recorded in ordinary fields. Personal words may appear. No surrounding text is stored. Encrypted here, exported only to a file you choose. Stop or erase revokes all diagnostics consents.</string>
+    <string name="telemetry_stop" translatable="false">Stop all diagnostics</string>
     <string name="telemetry_export" translatable="false">Export JSONL file</string>
     <string name="telemetry_clear" translatable="false">Erase local data</string>
     <string name="telemetry_consent_title" translatable="false">Store Estonian swipe diagnostics?</string>
@@ -89,6 +103,7 @@
     <string name="telemetry_confirm" translatable="false">Confirm</string>
     <string name="telemetry_cancel" translatable="false">Cancel</string>
     <string name="telemetry_exported" translatable="false">Diagnostic file saved locally</string>
+    <string name="telemetry_export_failed" translatable="false">Export failed. A partial plaintext file may remain in the selected location; delete it there manually.</string>
     <string name="telemetry_failed" translatable="false">Diagnostic operation failed; no successful export was confirmed</string>
     <string name="swipe_study_empty" translatable="false">No captured swipes to export. Start a new session.</string>
     <string name="swipe_toolbar_toggle" translatable="false">Toggle keyboard toolbar</string>
@@ -118,6 +133,7 @@
     <string name="swipe_preview_privacy_detail" translatable="false">Swipe recognition and emoji search run on your device. Optional Swipe diagnostics stores eligible Estonian swipe paths and corrections only after you turn it on; passwords and private fields are excluded. Nothing is uploaded.</string>
     <string name="swipe_preview_warning" translatable="false">Experimental preview · Check important text before sending.</string>
     <string name="swipe_emoji_query_description" translatable="false">Emoji search query</string>
+    <string name="swipe_emoji_item_description" translatable="false">Emoji %1$s</string>
     <string name="swipe_emoji_browse_search" translatable="false">Search emoji</string>
     <string name="swipe_emoji_search_hint" translatable="false">Search emoji · type below</string>
     <string name="swipe_emoji_backspace" translatable="false">Remove search letter</string>

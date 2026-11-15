@@ -208,7 +208,16 @@ class ReleaseRecordDriftTest {
     @Test
     fun everyAnchorResolvesInTheCurrentTree() {
         var checked = 0
-        for (row in sections.flatMap { it.rows }) {
+        // Viipio inherited this ledger as historical CleverKeys attribution. Its
+        // unpublished v2.0.0 draft describes an upstream launcher that this fork
+        // deliberately replaced; it is not a Viipio release promise. Keep checking
+        // every published upstream anchor and every immutable history hash.
+        val isViipioFork = File("build.gradle").readText()
+            .contains("applicationId \"io.github.tehisaru.estonianswipe\"")
+        val applicableRows = sections
+            .filterNot { isViipioFork && it.version in PENDING_RELEASES }
+            .flatMap { it.rows }
+        for (row in applicableRows) {
             val kind = row.status.substringBefore(" (")
             when (kind) {
                 "GUARDED" -> {

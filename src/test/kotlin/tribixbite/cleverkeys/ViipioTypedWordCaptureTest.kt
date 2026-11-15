@@ -1,0 +1,88 @@
+package tribixbite.cleverkeys
+
+import android.text.InputType
+import android.view.inputmethod.EditorInfo
+import android.widget.EditText
+import org.junit.Assert.*
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
+import tribixbite.cleverkeys.estonianui.KeyboardLanguage
+
+@RunWith(RobolectricTestRunner::class)
+class ViipioTypedWordCaptureTest {
+    private fun editor(type: Int = InputType.TYPE_CLASS_TEXT) = EditorInfo().apply {
+        packageName = "org.example.editor"
+        inputType = type
+    }
+    @Test fun onlyOwnCompletedWordWithExactReadbackCanBecomeAnOffer() {
+        val capture = ViipioTypedWordCapture()
+        val field = EditText(RuntimeEnvironment.getApplication())
+        val connection = field.onCreateInputConnection(editor())
+        val info = editor()
+        for (ch in "mhm") {
+            assertTrue(connection.commitText(ch.toString(), 1))
+            assertTrue(capture.recordLetter(ch.toString(), KeyboardLanguage.ESTONIAN, info, connection))
+        }
+        assertTrue(connection.commitText(" ", 1))
+        assertEquals("mhm", capture.completeAfterSpace(KeyboardLanguage.ESTONIAN, info, connection))
+        assertNull(capture.completeAfterSpace(KeyboardLanguage.ESTONIAN, info, connection))
+    }
+    @Test fun appInsertedPrefixOrChangedCaretCannotBeMistakenForOurWord() {
+        val capture = ViipioTypedWordCapture()
+        val field = EditText(RuntimeEnvironment.getApplication())
+        val connection = field.onCreateInputConnection(editor())
+        val info = editor()
+        field.setText("pre"); field.setSelection(3)
+        assertTrue(connection.commitText("f", 1))
+        assertFalse(capture.recordLetter("f", KeyboardLanguage.ESTONIAN, info, connection))
+        capture.clear()
+        field.setText(""); field.setSelection(0)
+        assertTrue(connection.commitText("m", 1))
+        assertTrue(capture.recordLetter("m", KeyboardLanguage.ESTONIAN, info, connection))
+        field.setSelection(0)
+        assertTrue(connection.commitText("h", 1))
+        assertFalse(capture.recordLetter("h", KeyboardLanguage.ESTONIAN, info, connection))
+    }
+    @Test fun ownerLanguageAndSensitiveFieldsInvalidate() {
+        val capture = ViipioTypedWordCapture()
+        val field = EditText(RuntimeEnvironment.getApplication())
+        val password = editor(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD)
+        val ordinary = editor()
+        val connection = field.onCreateInputConnection(ordinary)
+        connection.commitText("m", 1)
+        assertFalse(capture.recordLetter("m", KeyboardLanguage.ESTONIAN, password, connection))
+        assertTrue(capture.recordLetter("m", KeyboardLanguage.ESTONIAN, ordinary, connection))
+        connection.commitText("h", 1)
+        assertFalse(capture.recordLetter("h", KeyboardLanguage.ENGLISH, ordinary, connection))
+        connection.commitText(" ", 1)
+        assertNull(capture.completeAfterSpace(KeyboardLanguage.ESTONIAN, ordinary, connection))
+    }
+    @Test fun unreadableFollowingTextCannotProveWordBoundary() {
+        val capture = ViipioTypedWordCapture()
+        val field = EditText(RuntimeEnvironment.getApplication())
+        val info = editor()
+        val base = field.onCreateInputConnection(info)
+        val blind = object : android.view.inputmethod.InputConnectionWrapper(base, false) {
+            override fun getTextAfterCursor(n: Int, flags: Int): CharSequence? = null
+        }
+        blind.commitText("m", 1)
+        assertFalse(capture.recordLetter("m", KeyboardLanguage.ESTONIAN, info, blind))
+    }
+
+    @Test fun ownedBackspaceMayRemoveOnePendingLetterButExternalDeletionCannot() {
+        val capture = ViipioTypedWordCapture()
+        val field = EditText(RuntimeEnvironment.getApplication())
+        val info = editor()
+        val connection = field.onCreateInputConnection(info)
+        for (ch in "mhmh") {
+            connection.commitText(ch.toString(), 1)
+            assertTrue(capture.recordLetter(ch.toString(), KeyboardLanguage.ESTONIAN, info, connection))
+        }
+        assertTrue(connection.deleteSurroundingText(1, 0))
+        assertTrue(capture.recordBackspace(KeyboardLanguage.ESTONIAN, info, connection))
+        connection.commitText(" ", 1)
+        assertEquals("mhm", capture.completeAfterSpace(KeyboardLanguage.ESTONIAN, info, connection))
+    }
+}

@@ -17,7 +17,8 @@ class SwipeStudySession(private val ownPackage: String, val fieldId: Int) {
         val ESTONIAN_PROMPTS = listOf(
             "tere", "kass", "maja", "päike", "õun", "öö", "tänav", "sõber",
             "kodu", "raamat", "jõgi", "hommik", "majale", "majalt", "käisin",
-            "sõnadega", "õpetaja", "päikeseline", "telefon", "kirjutan"
+            "sõnadega", "õpetaja", "päikeseline", "telefon", "kirjutan",
+            "siis", "sis", "mhm", "mhmh"
         )
         val ENGLISH_PROMPTS = listOf("hello", "cat", "home", "sun", "keyboard", "morning", "writing", "friend")
         val PROMPTS = ESTONIAN_PROMPTS + ENGLISH_PROMPTS

@@ -15,6 +15,9 @@ import org.robolectric.RuntimeEnvironment
 import android.view.View
 import android.view.KeyEvent
 import android.view.MotionEvent
+import android.os.Looper
+import java.util.concurrent.TimeUnit
+import org.robolectric.Shadows.shadowOf
 import tribixbite.cleverkeys.swipeui.SwipeSuggestionSession
 import tribixbite.cleverkeys.PredictionResult
 import android.text.InputType
@@ -454,6 +457,20 @@ class EstonianSwipeServiceTest {
         assertEquals(0, scroll.scrollX)
     }
 
+    @Test fun inlinePersonalWordOfferFitsExistingToolbarAndStartsHidden() {
+        val service = Robolectric.buildService(EstonianSwipeService::class.java).get()
+        val layout = service.onCreateInputView() as LinearLayout
+        val bar = layout.getChildAt(0) as FrameLayout
+        val offer = (0 until bar.childCount).map { bar.getChildAt(it) }
+            .firstOrNull { it.tag == "viipio-personal-word-offer" }
+        assertNotNull("a dedicated inline add row must exist", offer)
+        assertEquals(View.GONE, offer!!.visibility)
+        assertTrue("inline action and dismissal need reachable touch targets",
+            (offer as LinearLayout).childCount >= 2)
+        assertEquals("the offer must replace the toolbar, not grow the IME",
+            (48 * service.resources.displayMetrics.density).toInt(), layout.getChildAt(0).layoutParams.height)
+    }
+
     @Test fun candidateNavigationHasAccessibleTouchAreaWithoutGrowingIme() {
         val service = Robolectric.buildService(EstonianSwipeService::class.java).get()
         val layout = service.onCreateInputView() as LinearLayout
@@ -545,6 +562,15 @@ class EstonianSwipeServiceTest {
         assertTrue(source.contains("override fun onFinishInputView("))
         assertTrue(source.contains("override fun onUpdateSelection("))
         assertTrue(source.contains("surface?.onGesture = null"))
+    }
+
+    @Test fun glideDeleteOwnedUndoRestoresCaretEvidenceAfterClearingCandidates() {
+        val source = java.io.File("src/main/kotlin/tribixbite/cleverkeys/EstonianSwipeService.kt").readText()
+        val branch = source.substringAfter("is SurfaceGesture.DeleteWord -> {")
+            .substringBefore("is SurfaceGesture.RepeatBackspace -> {")
+        assertTrue("DeleteWord must restore verified caret AFTER clearSuggestions() resets it",
+            Regex("clearSuggestions\\(\\).*ownSelectionAfterWrite\\(tracked\\.connection\\)", RegexOption.DOT_MATCHES_ALL)
+                .containsMatchIn(branch))
     }
 
     @Test fun ctcChecksAllEligibilityGatesBeforeDispatch() {
@@ -788,6 +814,121 @@ class EstonianSwipeServiceTest {
         field.setSelection(1)
         assertTrue(EstonianSwipeService.deleteBackward(connection))
         assertEquals("b", field.text.toString())
+    }
+
+    @Test fun pinEditorUsesDigitOnlyKeypadInsteadOfAlphabetAndHidesToolbar() {
+        val service = Robolectric.buildService(EstonianSwipeService::class.java).get()
+        val layout = service.onCreateInputView() as LinearLayout
+        val info = EditorInfo().apply {
+            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
+        }
+        service.onStartInput(info, false)
+        service.onStartInputView(info, false)
+        val surface = layout.getChildAt(2) as KeyboardSurfaceView
+        surface.layout(0, 0, 330, 286)
+        val keys = surface.geometry.keys
+        assertEquals(('0'..'9').map(Char::toString).toSet(),
+            keys.filter { it.kind == KeyKind.NUMBER }.map { it.label }.toSet())
+        assertEquals("123", surface.geometry.rows[0].joinToString("") { it.label })
+        assertEquals(listOf("123", "456", "789", "⌫0↵"),
+            surface.geometry.rows.map { row -> row.joinToString("") { it.label } })
+        assertTrue(keys.none { it.kind == KeyKind.LETTER || it.kind == KeyKind.EMOJI ||
+            it.kind == KeyKind.SPACE || it.kind == KeyKind.SYMBOLS ||
+            it.kind == KeyKind.SHIFT || it.kind == KeyKind.SYMBOL })
+        assertEquals(1, keys.count { it.kind == KeyKind.BACKSPACE })
+        assertEquals(1, keys.count { it.kind == KeyKind.ENTER })
+        assertEquals(View.GONE, layout.getChildAt(0).visibility)
+    }
+
+    @Test fun integerNumberFieldUsesKeypadThenRestoresLettersForText() {
+        val service = Robolectric.buildService(EstonianSwipeService::class.java).get()
+        val layout = service.onCreateInputView() as LinearLayout
+        val numeric = EditorInfo().apply { inputType = InputType.TYPE_CLASS_NUMBER }
+        service.onStartInput(numeric, false)
+        service.onStartInputView(numeric, false)
+        val surface = layout.getChildAt(2) as KeyboardSurfaceView
+        surface.layout(0, 0, 330, 286)
+        assertEquals(('0'..'9').map(Char::toString).toSet(),
+            surface.geometry.keys.filter { it.kind == KeyKind.NUMBER }.map { it.label }.toSet())
+        assertFalse(surface.geometry.keys.any { it.kind == KeyKind.LETTER })
+        assertEquals(View.GONE, layout.getChildAt(0).visibility)
+        val text = EditorInfo().apply { inputType = InputType.TYPE_CLASS_TEXT }
+        service.onStartInput(text, false)
+        service.onStartInputView(text, false)
+        assertTrue(surface.geometry.keys.any { it.kind == KeyKind.LETTER && it.label == "q" })
+        assertEquals(View.VISIBLE, layout.getChildAt(0).visibility)
+    }
+
+    @Test fun decimalAndSignedNumberFieldsExposeOnlyRequestedSeparators() {
+        val service = Robolectric.buildService(EstonianSwipeService::class.java).get()
+        val layout = service.onCreateInputView() as LinearLayout
+        val surface = layout.getChildAt(2) as KeyboardSurfaceView
+        surface.layout(0, 0, 330, 286)
+        val cases = listOf(
+            0 to emptySet<String>(),
+            InputType.TYPE_NUMBER_FLAG_DECIMAL to setOf("."),
+            InputType.TYPE_NUMBER_FLAG_SIGNED to setOf("-"),
+            (InputType.TYPE_NUMBER_FLAG_DECIMAL or InputType.TYPE_NUMBER_FLAG_SIGNED) to setOf("-", "."),
+            InputType.TYPE_NUMBER_VARIATION_PASSWORD to emptySet(),
+        )
+        for ((flags, expectedSymbols) in cases) {
+            val info = EditorInfo().apply { inputType = InputType.TYPE_CLASS_NUMBER or flags }
+            service.onStartInput(info, false)
+            service.onStartInputView(info, false)
+            assertEquals("flags $flags", expectedSymbols,
+                surface.geometry.keys.filter { it.kind == KeyKind.SYMBOL }.map { it.label }.toSet())
+            assertEquals("flags $flags", ('0'..'9').map(Char::toString).toSet(),
+                surface.geometry.keys.filter { it.kind == KeyKind.NUMBER }.map { it.label }.toSet())
+            assertFalse(surface.geometry.keys.any { it.kind == KeyKind.LETTER })
+        }
+    }
+
+    @Test fun phoneAndDateTimeEditorsUseSpecializedNumericKeys() {
+        val service = Robolectric.buildService(EstonianSwipeService::class.java).get()
+        val layout = service.onCreateInputView() as LinearLayout
+        val surface = layout.getChildAt(2) as KeyboardSurfaceView
+        surface.layout(0, 0, 337, 286)
+        val cases = listOf(
+            InputType.TYPE_CLASS_PHONE to setOf("*", "#", "+", "-"),
+            (InputType.TYPE_CLASS_DATETIME or InputType.TYPE_DATETIME_VARIATION_DATE) to setOf("/", "-"),
+            (InputType.TYPE_CLASS_DATETIME or InputType.TYPE_DATETIME_VARIATION_TIME) to setOf(":"),
+            InputType.TYPE_CLASS_DATETIME to setOf("/", ":", "-"),
+        )
+        for ((type, expectedSymbols) in cases) {
+            val info = EditorInfo().apply { inputType = type }
+            service.onStartInput(info, false)
+            service.onStartInputView(info, false)
+            val keys = surface.geometry.keys
+            assertEquals("type $type", ('0'..'9').map(Char::toString).toSet(),
+                keys.filter { it.kind == KeyKind.NUMBER }.map { it.label }.toSet())
+            assertEquals("type $type", expectedSymbols,
+                keys.filter { it.kind == KeyKind.SYMBOL }.map { it.label }.toSet())
+            assertFalse(keys.any { it.kind == KeyKind.LETTER || it.kind == KeyKind.EMOJI ||
+                it.kind == KeyKind.SPACE || it.kind == KeyKind.SYMBOLS })
+            assertEquals(1, keys.count { it.kind == KeyKind.BACKSPACE })
+            assertEquals(1, keys.count { it.kind == KeyKind.ENTER })
+            assertEquals(View.GONE, layout.getChildAt(0).visibility)
+        }
+    }
+
+    @Test fun heldBackspaceStopsBeforeSwitchingBetweenPinEditors() {
+        val service = Robolectric.buildService(EstonianSwipeService::class.java).get()
+        val layout = service.onCreateInputView() as LinearLayout
+        val first = EditorInfo().apply { inputType = InputType.TYPE_CLASS_NUMBER or
+            InputType.TYPE_NUMBER_VARIATION_PASSWORD }
+        service.onStartInput(first, false)
+        service.onStartInputView(first, false)
+        val surface = layout.getChildAt(2) as KeyboardSurfaceView
+        surface.layout(0, 0, 330, 286)
+        val emitted = mutableListOf<SurfaceGesture>()
+        surface.onGesture = emitted::add
+        val backspace = surface.geometry.keys.single { it.kind == KeyKind.BACKSPACE }.bounds
+        surface.onTouchEvent(MotionEvent.obtain(0, 0, MotionEvent.ACTION_DOWN,
+            backspace.centerX, backspace.centerY, 0))
+        val next = EditorInfo().apply { inputType = first.inputType }
+        service.onStartInput(next, false)
+        shadowOf(Looper.getMainLooper()).idleFor(500, TimeUnit.MILLISECONDS)
+        assertTrue("old PIN's repeat must not reach the next PIN editor", emitted.isEmpty())
     }
 
     @Test fun passwordEditorsNeverEnterSwipePrediction() {

@@ -88,7 +88,7 @@ class EmojiPanelView(context: Context) : LinearLayout(context) {
                         val emoji = row.entries.getOrNull(i)
                         text = emoji.orEmpty()
                         background = if (emoji == null) null else rounded(tileColor)
-                        contentDescription = emoji?.let { "Emoji $it" }
+                        contentDescription = emoji?.let { context.getString(R.string.swipe_emoji_item_description, it) }
                         isFocusable = emoji != null
                         isClickable = emoji != null
                         setOnClickListener(if (emoji == null) null else OnClickListener { pickForTest(emoji) })

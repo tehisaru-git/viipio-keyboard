@@ -11,7 +11,7 @@ README = (ROOT / "README.md").read_text()
 class ViipioReleaseMetadataTest(unittest.TestCase):
     def test_version_and_apk_name_are_branded(self):
         versions = dict(re.findall(r"ext\.(VERSION_MAJOR|VERSION_MINOR|VERSION_PATCH)\s*=\s*(\d+)", GRADLE))
-        self.assertEqual(versions, {"VERSION_MAJOR": "0", "VERSION_MINOR": "5", "VERSION_PATCH": "1"})
+        self.assertEqual(versions, {"VERSION_MAJOR": "0", "VERSION_MINOR": "6", "VERSION_PATCH": "0"})
         self.assertIn('ViipioKeyboard-v${variant.versionName}-${abi}.apk', GRADLE)
         self.assertIn('applicationId "io.github.tehisaru.estonianswipe"', GRADLE)
 
@@ -31,8 +31,11 @@ class ViipioReleaseMetadataTest(unittest.TestCase):
 
     def test_public_links_and_previous_name_migration_are_documented(self):
         self.assertIn("https://github.com/tehisaru-git/viipio-keyboard", README)
+        self.assertIn("v0.6.0 is an experimental public test release", README)
         self.assertIn("ViipioKeyboard-v0.5.1-arm64-v8a.apk", README)
         self.assertIn("releases/tag/v0.5.1", README)
+        self.assertIn("releases/tag/v0.6.0", README)
+        self.assertNotIn("local, unpublished candidate", README)
         self.assertIn("previously called **Estonian Swipe**", README)
         self.assertIn("io.github.tehisaru.estonianswipe", README)
 

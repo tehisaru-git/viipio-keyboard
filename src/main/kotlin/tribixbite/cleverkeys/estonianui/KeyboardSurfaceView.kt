@@ -40,6 +40,10 @@ class KeyboardSurfaceView @JvmOverloads constructor(
         set(value) {
             if (field != value) { field = value; rebuild() }
         }
+    var numericLayout: NumericLayout? = null
+        set(value) {
+            if (field != value) { field = value; rebuild() }
+        }
     var darkMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
         set(value) { field = value; invalidate() }
     var showCornerSymbols = true
@@ -69,6 +73,14 @@ class KeyboardSurfaceView @JvmOverloads constructor(
     private fun stopRepeat() {
         repeatArmed = false
         repeatHandler.removeCallbacks(repeatTick)
+    }
+    /** Editor identity can change without a geometry change; revoke the old pointer's timers. */
+    fun cancelActiveTouch() {
+        stopRepeat()
+        clearHold()
+        clearTrail()
+        repeatStarted = false
+        controller.cancel()
     }
     private val holdHandler = Handler(Looper.getMainLooper())
     private var heldKey: SurfaceKey? = null
@@ -176,10 +188,12 @@ class KeyboardSurfaceView @JvmOverloads constructor(
             if (virtualViewId == View.NO_ID) {
                 return AccessibilityNodeInfo.obtain(this@KeyboardSurfaceView).apply {
                     className = KeyboardSurfaceView::class.java.name
-                    for (index in geometry.keys.indices) addChild(this@KeyboardSurfaceView, index)
+                    for (index in geometry.keys.indices) {
+                        if (geometry.keys[index].kind != KeyKind.SPACER) addChild(this@KeyboardSurfaceView, index)
+                    }
                 }
             }
-            val key = geometry.keys.getOrNull(virtualViewId) ?: return null
+            val key = geometry.keys.getOrNull(virtualViewId)?.takeIf { it.kind != KeyKind.SPACER } ?: return null
             val b = key.bounds
             val location = IntArray(2)
             getLocationOnScreen(location)
@@ -208,7 +222,7 @@ class KeyboardSurfaceView @JvmOverloads constructor(
             }
         }
         override fun performAction(virtualViewId: Int, action: Int, arguments: Bundle?): Boolean {
-            val key = geometry.keys.getOrNull(virtualViewId) ?: return false
+            val key = geometry.keys.getOrNull(virtualViewId)?.takeIf { it.kind != KeyKind.SPACER } ?: return false
             return when (action) {
                 AccessibilityNodeInfo.ACTION_CLICK -> {
                     onGesture?.invoke(SurfaceGesture.Tap(key, language))
@@ -294,7 +308,7 @@ class KeyboardSurfaceView @JvmOverloads constructor(
         repeatStarted = false
         controller.cancel()
         if (width > 0 && height > 0) {
-            geometry = KeyboardGeometry(width, height, language, symbolMode)
+            geometry = KeyboardGeometry(width, height, language, symbolMode, numericLayout)
             controller = SurfaceGestureController(geometry) { onGesture?.invoke(it) }
         }
         focusId = View.NO_ID
@@ -307,6 +321,7 @@ class KeyboardSurfaceView @JvmOverloads constructor(
         val density = resources.displayMetrics.density
         val inset = (3f * density).coerceAtMost(geometry.width / 120f)
         for (key in geometry.keys) {
+            if (key.kind == KeyKind.SPACER) continue
             val b = key.bounds
             rect.set(b.left + inset, b.top + inset, b.right - inset, b.bottom - inset)
             paint.color = when (key.kind) {

@@ -16,6 +16,8 @@ import tribixbite.cleverkeys.R
 /** Explicit consent, status, export and erase. No silent telemetry upload or public-file write. */
 class TelemetryActivity : Activity() {
     private lateinit var status: TextView
+    private lateinit var manualStatus: TextView
+    private lateinit var inputStatus: TextView
     private var active = true
     companion object { private const val CREATE_DOCUMENT = 1832 }
 
@@ -42,6 +44,16 @@ class TelemetryActivity : Activity() {
         }
         column.addView(status, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
             (52 * resources.displayMetrics.density).toInt()))
+        manualStatus = TextView(this).apply {
+            text = getString(R.string.telemetry_manual_off, 0)
+            textSize = 18f
+        }
+        column.addView(manualStatus)
+        inputStatus = TextView(this).apply {
+            text = getString(R.string.telemetry_input_off, 0)
+            textSize = 18f
+        }
+        column.addView(inputStatus)
         fun button(id: Int, click: () -> Unit) {
             column.addView(Button(this).apply {
                 text = getString(id)
@@ -56,6 +68,24 @@ class TelemetryActivity : Activity() {
                 .setNegativeButton(R.string.telemetry_cancel, null)
                 .setPositiveButton(R.string.telemetry_confirm) { _, _ ->
                     TelemetryRuntime.enable(this) { result -> operationResult(result) }
+                }.show()
+        }
+        button(R.string.telemetry_manual_start) {
+            AlertDialog.Builder(this)
+                .setTitle(R.string.telemetry_manual_consent_title)
+                .setMessage(R.string.telemetry_manual_consent_body)
+                .setNegativeButton(R.string.telemetry_cancel, null)
+                .setPositiveButton(R.string.telemetry_confirm) { _, _ ->
+                    TelemetryRuntime.enableManual(this) { result -> operationResult(result) }
+                }.show()
+        }
+        button(R.string.telemetry_input_start) {
+            AlertDialog.Builder(this)
+                .setTitle(R.string.telemetry_input_consent_title)
+                .setMessage(R.string.telemetry_input_consent_body)
+                .setNegativeButton(R.string.telemetry_cancel, null)
+                .setPositiveButton(R.string.telemetry_confirm) { _, _ ->
+                    TelemetryRuntime.enableInputEvents(this) { result -> operationResult(result) }
                 }.show()
         }
         button(R.string.telemetry_stop) {
@@ -91,6 +121,12 @@ class TelemetryActivity : Activity() {
             status.text = if (stats == null) getString(R.string.telemetry_unavailable)
                 else getString(if (stats.enabled) R.string.telemetry_on else R.string.telemetry_off,
                     stats.swipes, stats.corrections)
+            manualStatus.text = if (stats == null) getString(R.string.telemetry_unavailable)
+                else getString(if (stats.manualEnabled) R.string.telemetry_manual_on
+                    else R.string.telemetry_manual_off, stats.manualWords)
+            inputStatus.text = if (stats == null) getString(R.string.telemetry_unavailable)
+                else getString(if (stats.inputEnabled) R.string.telemetry_input_on
+                    else R.string.telemetry_input_off, stats.inputEvents)
         }
     }
 
@@ -107,7 +143,7 @@ class TelemetryActivity : Activity() {
         val uri = data?.data ?: return
         TelemetryRuntime.export(this, uri) { ok ->
             if (active) Toast.makeText(this, if (ok) R.string.telemetry_exported
-                else R.string.telemetry_failed, Toast.LENGTH_LONG).show()
+                else R.string.telemetry_export_failed, Toast.LENGTH_LONG).show()
         }
     }
 

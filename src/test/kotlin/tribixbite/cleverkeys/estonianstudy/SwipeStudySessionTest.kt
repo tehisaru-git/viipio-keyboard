@@ -66,6 +66,13 @@ class SwipeStudySessionTest {
         assertTrue(trace.getJSONArray("keys").length() > 0)
     }
 
+    @Test fun fixedEstonianStudyCanTestSiisAndExplicitChatFormsWithoutPrivateText() {
+        val prompts = SwipeStudySession.ESTONIAN_PROMPTS
+        assertTrue(prompts.containsAll(listOf("siis", "sis", "mhm", "mhmh")))
+        assertEquals(prompts.size, prompts.distinct().size)
+        assertTrue(SwipeStudySession.ENGLISH_PROMPTS.none { it in prompts })
+    }
+
     @Test fun sessionEvictsOldestAndClearResetsPrompt() {
         val session = SwipeStudySession("io.github.tehisaru.estonianswipe", 123)
         session.start()

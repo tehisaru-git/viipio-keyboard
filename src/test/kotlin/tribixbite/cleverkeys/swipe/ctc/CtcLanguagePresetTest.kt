@@ -152,14 +152,12 @@ class CtcLanguagePresetTest {
     // ── The language table ─────────────────────────────────────────────────────────
 
     @Test
-    fun `the served set is the seven latin languages plus the six script languages`() {
-        // Seven bundled Latin dictionaries, plus the six script languages — ru (2026-08-29),
-        // el (2026-08-30), and uk/bg/mk/he (2026-09-03, unblocked by ARC-056's langpacks) —
-        // whose lexicons are NOT bundled: each rides its importable `langpack-<code>.zip`,
-        // which for ru is the exact pack every published Russian number was measured on.
+    fun `Viipio adds experimental Estonian to the seven latin presets and six script languages`() {
+        // The inherited seven Latin presets and six script rows remain; Viipio adds the
+        // experimental ET lexicon independently. Membership is not a swipe-accuracy claim.
         assertThat(CtcLanguageSupport.SUPPORTED.keys)
             .containsExactly(
-                "en", "fr", "de", "es", "it", "pt", "sv", "ru", "el", "uk", "bg", "mk", "he"
+                "en", "fr", "de", "es", "it", "pt", "sv", "et", "ru", "el", "uk", "bg", "mk", "he"
             )
         // …and the static half of the membership now covers every script row, so the script
         // table and the language table can only disagree by a deliberate edit to one of them

@@ -1,5 +1,7 @@
 # Viipio keyboard: Gboard-like typing parity roadmap
 
+> **Historical plan.** Its proposed version numbers (including an emoji/clipboard v0.6.0) predate the actual v0.5.1 release and the current v0.6.0 personal-words/diagnostics work. Use [the updated research and prioritized backlog](viipio-gboard-feature-backlog.md) for future planning; keep this document for source-history context.
+
 **Scope:** the *active* `EstonianSwipeService` registered in `AndroidManifest.xml:31–42`, not dormant CleverKeys keyboard/view/clipboard/voice features. This is a source/limited-emulator snapshot, **not** a physical-device audit or a claim of Gboard equivalence. v0.3.0 covers the rebrand and manually typed prefix suggestions; version numbers after that are **proposals**, not published releases.
 
 ## Evidence and priority rule

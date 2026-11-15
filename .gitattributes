@@ -65,3 +65,6 @@ build/** linguist-generated
 *.kt linguist-language=Kotlin
 *.xml linguist-language=XML
 web_demo/swipe_vocabulary.json -text
+
+# Preserve vendored ClearURLs rules byte-for-byte; upstream JSON has trailing spaces.
+src/main/assets/url_rules/clearurls.json whitespace=-trailing-space

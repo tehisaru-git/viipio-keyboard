@@ -190,6 +190,9 @@ site/~/
 # generateComposeData overwrites tracked Kotlin with an incomplete constants table.
 !srcs/compose/*.json
 !srcs/compose/compose/*.json
+# These packaged runtime assets are inputs, not temporary JSON outputs.
+!src/main/assets/bigrams/*.json
+!src/main/assets/url_rules/*.json
 !site/**/*.json
 !site/package.json
 !site/tsconfig.json

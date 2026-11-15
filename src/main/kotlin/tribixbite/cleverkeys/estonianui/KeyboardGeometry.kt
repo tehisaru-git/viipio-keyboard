@@ -2,7 +2,8 @@ package tribixbite.cleverkeys.estonianui
 
 /** This geometry is the sole owner of draw, touch, accessibility and swipe coordinates. */
 enum class KeyboardLanguage { ESTONIAN, ENGLISH }
-enum class KeyKind { LETTER, NUMBER, SYMBOL, SHIFT, BACKSPACE, SYMBOLS, COMMA, EMOJI, LANGUAGE, SPACE, PERIOD, ENTER }
+enum class KeyKind { LETTER, NUMBER, SYMBOL, SHIFT, BACKSPACE, SYMBOLS, COMMA, EMOJI, LANGUAGE, SPACE, PERIOD, ENTER, SPACER }
+enum class NumericLayout { PIN, INTEGER, DECIMAL, SIGNED, SIGNED_DECIMAL, PHONE, DATE, TIME, DATETIME }
 
 data class KeyBounds(val left: Int, val top: Int, val right: Int, val bottom: Int) {
     val centerX: Float get() = (left + right) / 2f
@@ -33,12 +34,44 @@ data class SurfaceKey(val label: String, val kind: KeyKind, val bounds: KeyBound
     }
 }
 
-class KeyboardGeometry(val width: Int, val height: Int, val language: KeyboardLanguage, val symbolMode: Boolean = false) {
+class KeyboardGeometry(val width: Int, val height: Int, val language: KeyboardLanguage,
+                       val symbolMode: Boolean = false, val numericLayout: NumericLayout? = null) {
     init { require(width > 0 && height > 0) }
     private data class Spec(val label: String, val kind: KeyKind, val weight: Int = 1)
     private fun letters(text: String) = text.map { Spec(it.toString(), KeyKind.LETTER) }
     private fun symbols(text: String) = text.map { Spec(it.toString(), KeyKind.SYMBOL) }
-    private val definitions: List<List<Spec>> = listOf(
+    private fun optionalSymbol(label: String?) = if (label == null) Spec("", KeyKind.SPACER)
+        else Spec(label, KeyKind.SYMBOL)
+    private val definitions: List<List<Spec>> = if (numericLayout == NumericLayout.PIN) listOf(
+        listOf("1", "2", "3").map { Spec(it, KeyKind.NUMBER) },
+        listOf("4", "5", "6").map { Spec(it, KeyKind.NUMBER) },
+        listOf("7", "8", "9").map { Spec(it, KeyKind.NUMBER) },
+        listOf(Spec("⌫", KeyKind.BACKSPACE), Spec("0", KeyKind.NUMBER), Spec("↵", KeyKind.ENTER))
+    ) else if (numericLayout in setOf(NumericLayout.PHONE, NumericLayout.DATE,
+            NumericLayout.TIME, NumericLayout.DATETIME)) listOf(
+        listOf(Spec("1", KeyKind.NUMBER), Spec("2", KeyKind.NUMBER), Spec("3", KeyKind.NUMBER),
+            optionalSymbol(if (numericLayout == NumericLayout.PHONE || numericLayout == NumericLayout.DATE ||
+                numericLayout == NumericLayout.DATETIME) "-" else null)),
+        listOf("4", "5", "6").map { Spec(it, KeyKind.NUMBER) } +
+            optionalSymbol(if (numericLayout == NumericLayout.PHONE) "+" else null),
+        listOf("7", "8", "9").map { Spec(it, KeyKind.NUMBER) } + Spec("⌫", KeyKind.BACKSPACE),
+        listOf(optionalSymbol(when (numericLayout) {
+            NumericLayout.PHONE -> "*"; NumericLayout.DATE, NumericLayout.DATETIME -> "/"
+            NumericLayout.TIME -> ":"; else -> null
+        }), Spec("0", KeyKind.NUMBER), optionalSymbol(when (numericLayout) {
+            NumericLayout.PHONE -> "#"; NumericLayout.DATETIME -> ":"; else -> null
+        }), Spec("↵", KeyKind.ENTER))
+    ) else if (numericLayout != null) listOf(
+        listOf(Spec("1", KeyKind.NUMBER), Spec("2", KeyKind.NUMBER), Spec("3", KeyKind.NUMBER),
+            if (numericLayout == NumericLayout.SIGNED || numericLayout == NumericLayout.SIGNED_DECIMAL)
+                Spec("-", KeyKind.SYMBOL) else Spec("", KeyKind.SPACER)),
+        listOf("4", "5", "6").map { Spec(it, KeyKind.NUMBER) } + Spec("", KeyKind.SPACER),
+        listOf("7", "8", "9").map { Spec(it, KeyKind.NUMBER) } + Spec("⌫", KeyKind.BACKSPACE),
+        listOf(Spec("", KeyKind.SPACER), Spec("0", KeyKind.NUMBER),
+            if (numericLayout == NumericLayout.DECIMAL || numericLayout == NumericLayout.SIGNED_DECIMAL)
+                Spec(".", KeyKind.SYMBOL) else Spec("", KeyKind.SPACER),
+            Spec("↵", KeyKind.ENTER))
+    ) else listOf(
         "1234567890".map { Spec(it.toString(), KeyKind.NUMBER) },
         if (symbolMode) symbols("@#€%&*-+()") else letters(if (language == KeyboardLanguage.ESTONIAN) "qwertyuiopü" else "qwertyuiop"),
         if (symbolMode) symbols(":;/\\'\"=<>!?") else letters(if (language == KeyboardLanguage.ESTONIAN) "asdfghjklöä" else "asdfghjkl"),
@@ -64,6 +97,6 @@ class KeyboardGeometry(val width: Int, val height: Int, val language: KeyboardLa
     fun hit(x: Float, y: Float): SurfaceKey? {
         if (!x.isFinite() || !y.isFinite() || x < 0 || y < 0 || x >= width || y >= height) return null
         return rows.firstOrNull { row -> y >= row[0].bounds.top && y < row[0].bounds.bottom }
-            ?.firstOrNull { it.bounds.contains(x, y) }
+            ?.firstOrNull { it.kind != KeyKind.SPACER && it.bounds.contains(x, y) }
     }
 }

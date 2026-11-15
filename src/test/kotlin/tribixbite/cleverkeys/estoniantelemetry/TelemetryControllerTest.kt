@@ -25,6 +25,181 @@ class TelemetryControllerTest {
         TelemetryGeometry(300, 200), listOf("tere", "terve"), "tere", 100, 160)
     private fun exported(c: TelemetryController): String = ByteArrayOutputStream().also { c.exportJsonl(it) }.toString("UTF-8")
 
+    @Test fun swipeReplayNeverTemporarilyExceedsLiveRecordCap() {
+        val c = controller()
+        assertTrue(c.enable())
+        repeat(TelemetryController.MAX_SWIPES + 3) { i ->
+            assertTrue(c.recordSwipe(trace().copy(id = "replay$i")))
+        }
+        var peak = 0
+        val replayed = TelemetryController(ApplicationProvider.getApplicationContext(), c.storeName, box,
+            replaySizeObserver = { peak = maxOf(peak, it) })
+        assertEquals(TelemetryController.MAX_SWIPES, replayed.stats().swipes)
+        assertTrue("peak swipe records: $peak", peak <= TelemetryController.MAX_SWIPES)
+    }
+
+    @Test fun oversizedEncryptedLogFailsClosedBeforeAnyEventIsOpened() {
+        val c = controller()
+        assertTrue(c.enable())
+        assertTrue(c.recordSwipe(trace()))
+        val segments = c.encryptedFileForTest()
+        // Valid segment names, but collectively larger than the permitted encrypted-store size.
+        repeat(49) { i ->
+            java.io.RandomAccessFile(java.io.File(segments, "%016d.seg".format(i + 100)), "rw")
+                .use { it.setLength(1024L * 1024) }
+        }
+        var opens = 0
+        val observing = object : CipherBox {
+            override fun seal(bytes: ByteArray) = box.seal(bytes)
+            override fun open(bytes: ByteArray): ByteArray { opens++; return box.open(bytes) }
+            override fun destroy() = box.destroy()
+        }
+        val resumed = TelemetryController(ApplicationProvider.getApplicationContext(), c.storeName, observing)
+        assertFalse(resumed.isEnabled)
+        assertFalse(resumed.enable())
+        assertEquals(0, opens)
+    }
+
+    @Test fun versionedSwipeDiagnosticsKeepAlignedCandidateScoresAndDecoderOnlyWhenValid() {
+        val c = controller()
+        assertTrue(c.enable())
+        val scored = trace().copy(decoderSource = SwipeDecoderSource.CTC,
+            candidateScores = listOf(900, 500))
+        assertTrue(c.recordSwipe(scored))
+        val row = JSONObject(exported(c).trim())
+        assertEquals("estonian-swipe-v2", row.getString("schema"))
+        assertEquals("ctc", row.getString("decoder"))
+        assertEquals(tribixbite.cleverkeys.BuildConfig.VERSION_NAME, row.getString("appVersion"))
+        assertEquals(900, row.getJSONArray("candidateScores").getInt(0))
+        assertFalse(c.recordSwipe(scored.copy(id = "bad", candidateScores = listOf(900))))
+        assertFalse(c.recordSwipe(scored.copy(id = "bad2", candidateScores = listOf(900, 2001))))
+        assertEquals(1, TelemetryController(ApplicationProvider.getApplicationContext(), c.storeName, box).stats().swipes)
+    }
+
+    @Test fun manualMemoryIsBoundedImmediatelyWithoutOpeningStatusOrExport() {
+        val c = controller()
+        assertTrue(c.enableManual())
+        repeat(TelemetryController.MAX_SWIPES + 2) {
+            assertTrue(c.recordManualWord("tere", "et", editor(), ManualWordSource.VERIFIED_KEY_TYPED))
+        }
+        val field = TelemetryController::class.java.getDeclaredField("manualRecords").apply { isAccessible = true }
+        assertEquals(TelemetryController.MAX_SWIPES, (field.get(c) as Map<*, *>).size)
+        val restarted = TelemetryController(ApplicationProvider.getApplicationContext(), c.storeName, box)
+        assertEquals(TelemetryController.MAX_SWIPES, (field.get(restarted) as Map<*, *>).size)
+    }
+
+    @Test fun failedConsentRemovalDoesNotReenableDiagnosticsAfterRestart() {
+        val c = controller()
+        assertTrue(c.enableManual())
+        val base = ApplicationProvider.getApplicationContext<Context>().noBackupFilesDir
+        val marker = java.io.File(base, "${c.storeName}.manual.enabled")
+        assertTrue(marker.delete())
+        assertTrue(marker.mkdir())
+        val obstacle = java.io.File(marker, "obstacle")
+        obstacle.writeText("1")
+        try {
+            assertFalse(c.disable())
+            val restarted = TelemetryController(ApplicationProvider.getApplicationContext(), c.storeName, box)
+            assertFalse(restarted.isManualEnabled)
+            assertFalse(restarted.enableManual())
+            assertFalse(restarted.recordManualWord("tere", "et", editor(), ManualWordSource.VERIFIED_KEY_TYPED))
+        } finally {
+            obstacle.delete()
+            marker.delete()
+            java.io.File(base, "${c.storeName}.revoked").delete()
+        }
+    }
+
+    @Test fun manualConsentIsSeparateAndReplayDoesNotEnableSwipe() {
+        val c = controller()
+        assertFalse(c.recordManualWord("tere", "et", editor(), ManualWordSource.VERIFIED_KEY_TYPED))
+        assertTrue(c.enableManual())
+        assertFalse(c.isEnabled)
+        assertFalse(c.recordSwipe(trace()))
+        assertTrue(c.recordManualWord("tere", "et", editor(), ManualWordSource.VERIFIED_KEY_TYPED))
+        val restored = TelemetryController(ApplicationProvider.getApplicationContext(), c.storeName, box)
+        assertTrue(restored.isManualEnabled)
+        assertFalse(restored.isEnabled)
+        assertEquals(0, restored.stats().swipes)
+        val row = JSONObject(exported(restored).trim())
+        assertEquals("estonian-manual-v1", row.getString("schema"))
+        assertEquals("tere", row.getString("word"))
+        assertFalse(row.has("pkg"))
+        assertFalse(row.has("field"))
+        assertFalse(row.has("createdMs"))
+    }
+
+    @Test fun manualRejectsSensitiveInputsAndUnverifiedSources() {
+        val c = controller()
+        assertTrue(c.enableManual())
+        assertFalse(c.recordManualWord("tere", "en", editor(), ManualWordSource.VERIFIED_KEY_TYPED))
+        assertFalse(c.recordManualWord("tere", "et", null, ManualWordSource.VERIFIED_KEY_TYPED))
+        assertFalse(c.recordManualWord("hello world", "et", editor(), ManualWordSource.VERIFIED_KEY_TYPED))
+        assertFalse(c.recordManualWord("tere", "et", editor(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD), ManualWordSource.VERIFIED_KEY_TYPED))
+        assertFalse(c.recordManualWord("tere", "et", editor().apply { imeOptions = EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING }, ManualWordSource.VERIFIED_KEY_TYPED))
+        assertEquals("", exported(c))
+    }
+
+    @Test fun unavailableSwipeLinkKeepsIndependentlyConsentedManualWordUnlinked() {
+        val c = controller()
+        assertTrue(c.enableManual())
+        assertTrue(c.recordManualWord("terve", "et", editor(), ManualWordSource.VERIFIED_KEY_TYPED, "missing"))
+        val row = JSONObject(exported(c).trim())
+        assertEquals("terve", row.getString("word"))
+        assertFalse(row.has("swipeId"))
+    }
+
+    @Test fun undoWithoutRecordedManualCorrectionCannotClaimAProvenanceLink() {
+        val c = controller()
+        assertTrue(c.enableManual())
+        assertTrue(c.enable())
+        assertTrue(c.recordSwipe(trace()))
+        assertTrue(c.recordUndo("id1", "et", editor()))
+        assertTrue(c.recordManualWord("terve", "et", editor(), ManualWordSource.VERIFIED_KEY_TYPED, "id1"))
+        val rows = exported(c).trim().lines().map(::JSONObject)
+        assertFalse(rows.single { it.getString("schema") == "estonian-manual-v1" }.has("swipeId"))
+    }
+
+    @Test fun verifiedManualReplacementMayLinkAfterMatchingSwipeFinalization() {
+        val c = controller()
+        assertTrue(c.enable())
+        assertTrue(c.enableManual())
+        assertTrue(c.recordSwipe(trace()))
+        assertTrue(c.recordUndo("id1", "et", editor()))
+        assertTrue(c.recordCorrection("id1", "et", editor(), "tere", "terve", "manual"))
+        assertTrue(c.recordFinalization("id1", "et", editor(), "terve"))
+        assertTrue(c.recordManualWord("terve", "et", editor(), ManualWordSource.VERIFIED_KEY_TYPED, "id1"))
+        val rows = exported(c).trim().lines().map(::JSONObject)
+        assertEquals("id1", rows.single { it.getString("schema") == "estonian-manual-v1" }.getString("swipeId"))
+        assertTrue(c.recordManualWord("teine", "et", editor(), ManualWordSource.VERIFIED_KEY_TYPED, "id1"))
+        val later = exported(c).trim().lines().map(::JSONObject)
+            .filter { it.getString("schema") == "estonian-manual-v1" }
+        assertFalse(later.last().has("swipeId"))
+    }
+
+    @Test fun manualLinkRequiresSameFieldResolvedUndoAndBothConsents() {
+        val c = controller()
+        assertTrue(c.enableManual())
+        assertTrue(c.recordManualWord("terve", "et", editor(), ManualWordSource.VERIFIED_KEY_TYPED, "id1"))
+        assertTrue(c.enable())
+        assertTrue(c.recordSwipe(trace()))
+        assertTrue(c.recordUndo("id1", "et", editor()))
+        assertTrue(c.recordCorrection("id1", "et", editor(), "tere", "terve", "manual"))
+        assertTrue(c.recordFinalization("id1", "et", editor(), "terve"))
+        assertTrue(c.recordManualWord("terve", "et", editor().apply { fieldId = 42 },
+            ManualWordSource.VERIFIED_KEY_TYPED, "id1"))
+        assertTrue(c.recordManualWord("terve", "et", editor(), ManualWordSource.VERIFIED_KEY_TYPED, "id1"))
+        val manualRows = exported(c).trim().lines().map(::JSONObject)
+            .filter { it.getString("schema") == "estonian-manual-v1" }
+        assertEquals(3, manualRows.size)
+        assertEquals(1, manualRows.count { it.optString("swipeId") == "id1" })
+        assertTrue(c.disable())
+        assertFalse(c.isManualEnabled)
+        assertFalse(c.recordManualWord("sõna", "et", editor(), ManualWordSource.VERIFIED_KEY_TYPED))
+        assertTrue(c.clear())
+        assertFalse(TelemetryController(ApplicationProvider.getApplicationContext(), c.storeName, box).isManualEnabled)
+    }
+
     @Test fun explicitConsentAndSwipeOnlyCollection() {
         val c = controller()
         assertFalse(c.recordSwipe(trace()))
