@@ -192,6 +192,9 @@ object SettingsValidation {
         "cgr_kappa",
         "cgr_lambda",
         "cgr_length_filter",
+        // The old onboarding calibration visit flag lost its final reader when
+        // Viipio replaced the launcher; old backups must not reintroduce it.
+        "has_visited_calibration",
         // F-6 (2026-09-06): the Pin Entry Layout switch wrote this while its only runtime
         // reader was Config.migrate's ONE-TIME seeding of number_entry_layout (which runs
         // before Settings can ever open) — a no-op control on every install. The switch

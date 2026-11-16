@@ -194,9 +194,8 @@ internal val SETTINGS_DEFAULTS: Map<String, PrefValue> = mapOf(
     // NOTE (F-7, 2026-09-06): the five cgr_* keys that sat here are now in
     // SettingsValidation.DEPRECATED_KEYS — their SwipeCalibrationActivity died
     // with the neural engine (2026-08-18) and NO reader or writer remained, yet
-    // they were being seeded into every settings export. Only
-    // has_visited_calibration in that block is still live (LauncherActivity).
-    "has_visited_calibration" to PrefValue.Bool(false),
+    // they were being seeded into every settings export. Viipio's launcher
+    // no longer reads has_visited_calibration either; it is deprecated too.
 
     // NOTE (F-6, 2026-09-06): pin_entry_enabled moved to DEPRECATED_KEYS. The
     // Pin Entry Layout switch now writes `number_entry_layout` (above) directly;

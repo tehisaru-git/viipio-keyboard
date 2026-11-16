@@ -4,6 +4,7 @@ import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import org.junit.Test
 import tribixbite.cleverkeys.backup.SETTINGS_DEFAULTS
+import tribixbite.cleverkeys.backup.SettingsValidation
 import java.io.File
 
 /**
@@ -87,6 +88,12 @@ class SettingsSurfaceDriftTest {
                 "the switch must write number_entry_layout directly"
         ).that(section.contains("saveSetting(\"pin_entry_enabled\"")).isFalse()
         assertThat(section).contains("saveSetting(\"number_entry_layout\"")
+    }
+
+    @Test
+    fun retiredCalibrationVisitFlagIsNoLongerSeededAndIsDeprecated() {
+        assertThat(SettingsValidation.isDeprecatedPreference("has_visited_calibration")).isTrue()
+        assertThat(SETTINGS_DEFAULTS).doesNotContainKey("has_visited_calibration")
     }
 
     // ── F-7: every exported default needs a runtime reader ──
