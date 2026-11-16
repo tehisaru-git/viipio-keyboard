@@ -3,7 +3,7 @@ from pathlib import Path
 import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
-SERVICE = (ROOT / 'src/main/kotlin/tribixbite/cleverkeys/EstonianSwipeService.kt').read_text()
+SERVICE = (ROOT / 'src/main/kotlin/tribixbite/cleverkeys/ViipioInputMethodService.kt').read_text()
 
 class EmojiPickerPersistenceTest(unittest.TestCase):
     def test_verified_pick_keeps_picker_open_until_explicit_close(self):

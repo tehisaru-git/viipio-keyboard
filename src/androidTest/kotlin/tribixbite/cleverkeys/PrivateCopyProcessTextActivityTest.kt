@@ -53,7 +53,8 @@ class PrivateCopyProcessTextActivityTest {
         TestConfigHelper.ensureConfigInitialized(context)
         db = ClipboardDatabase.getInstance(context)
         // component uses ctx.packageName (which carries the `.debug` applicationIdSuffix); the class
-        // name is absolute, so flattenToShortString() → "tribixbite.cleverkeys.debug/...ProcessText…".
+        // name is absolute, so flattenToShortString() contains both the new app ID and the
+        // `tribixbite.cleverkeys.PrivateCopyProcessTextActivity` component class.
         component = ComponentName(context, PrivateCopyProcessTextActivity::class.java)
         clearAll()
         // Enable the feature pref + component so the activity is launchable.

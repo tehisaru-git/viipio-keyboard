@@ -2256,7 +2256,7 @@
     <string name="swipe_debug_clear_traces_all">All swipe data</string>
     <string name="swipe_debug_clear_traces_message">Delete recorded swipe traces from this device?\n\n“%1$s” removes traces recorded on this screen; “%2$s” also removes traces from the global ML collection.</string>
     <string name="manifest_ime_service_label" translatable="false">Viipio keyboard</string>
-    <string name="estonian_swipe_ime_label" translatable="false">Viipio keyboard</string>
+    <string name="viipio_ime_label" translatable="false">Viipio keyboard</string>
     <string name="manifest_backup_restore_label">Backup &amp; Restore</string>
     <plurals name="swipe_debug_toast_cleared_traces">
         <item quantity="one">Cleared %1$d trace</item>

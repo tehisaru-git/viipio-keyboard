@@ -14,7 +14,7 @@ class ViipioBrandingTest(unittest.TestCase):
         strings = ET.parse(ROOT / 'res/values/strings.xml').getroot()
         by_name = {item.get('name'): item for item in strings.findall('string')}
         self.assertEqual(by_name['app_name'].text, 'Viipio keyboard')
-        for name in ('app_name', 'estonian_swipe_ime_label'):
+        for name in ('app_name', 'viipio_ime_label'):
             self.assertEqual(by_name[name].get('translatable'), 'false')
             self.assertEqual(by_name[name].text, 'Viipio keyboard')
         for name in ('swipe_setup_enable_detail', 'swipe_setup_select_detail'):
@@ -40,10 +40,10 @@ class ViipioBrandingTest(unittest.TestCase):
         app = root.find('application')
         self.assertEqual(app.get(ANDROID + 'label'), '@string/app_name')
         self.assertEqual(app.get(ANDROID + 'icon'), '@mipmap/ic_launcher')
-        service = next(s for s in app.findall('service') if s.get(ANDROID + 'name') == 'tribixbite.cleverkeys.EstonianSwipeService')
-        self.assertEqual(service.get(ANDROID + 'label'), '@string/estonian_swipe_ime_label')
+        service = next(s for s in app.findall('service') if s.get(ANDROID + 'name') == 'tribixbite.cleverkeys.ViipioInputMethodService')
+        self.assertEqual(service.get(ANDROID + 'label'), '@string/viipio_ime_label')
         build = (ROOT / 'build.gradle').read_text()
-        self.assertIn('applicationId "io.github.tehisaru.estonianswipe"', build)
+        self.assertIn('applicationId "io.github.tehisaru.viipio"', build)
 
     def test_icon_is_adaptive_and_has_monochrome_mask(self):
         icon = ET.parse(ROOT / 'res/mipmap-anydpi-v26/ic_launcher.xml').getroot()
@@ -54,7 +54,7 @@ class ViipioBrandingTest(unittest.TestCase):
             vector = ET.parse(ROOT / f'res/drawable/ic_launcher_{name}.xml').getroot()
             self.assertEqual(vector.tag, 'vector')
             self.assertGreaterEqual(len(vector.findall('path')), 3)
-        spec = importlib.util.spec_from_file_location('viipio_icon', ROOT / 'scripts/generate_estonian_swipe_icon.py')
+        spec = importlib.util.spec_from_file_location('viipio_icon', ROOT / 'scripts/generate_viipio_icon.py')
         assert spec and spec.loader
         generator = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(generator)

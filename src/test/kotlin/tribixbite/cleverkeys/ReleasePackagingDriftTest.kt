@@ -286,15 +286,15 @@ class ReleasePackagingDriftTest {
 
         // Release resolution: defaultConfig applicationId with no release suffix.
         val appId = Regex("""applicationId\s+"([^"]+)"""").find(buildGradle)?.groupValues?.get(1)
-        assertThat(appId).isEqualTo("io.github.tehisaru.estonianswipe")
+        assertThat(appId).isEqualTo("io.github.tehisaru.viipio")
         // Inside buildTypes: signingConfigs has release/debug blocks of its own.
         val buildTypes = buildGradle.substringAfter("  buildTypes {")
         assertThat(buildTypes).isNotEqualTo(buildGradle)
         val releaseBlock = buildTypes.substringAfter("    release {").substringBefore("    debug {")
-        assertWithMessage("release must keep the bare applicationId (v1.5.0 permission name)")
+        assertWithMessage("release must keep the bare applicationId for variant-scoped permissions")
             .that(releaseBlock).doesNotContain("applicationIdSuffix")
         assertThat("$appId.permission.SET_DEBUG_MODE")
-            .isEqualTo("io.github.tehisaru.estonianswipe.permission.SET_DEBUG_MODE")
+            .isEqualTo("io.github.tehisaru.viipio.permission.SET_DEBUG_MODE")
         val debugBlock = buildTypes.substringAfter("    debug {").substringBefore("\n    }")
         assertWithMessage("debug needs its own applicationId to coexist")
             .that(debugBlock).contains("applicationIdSuffix '.debug'")

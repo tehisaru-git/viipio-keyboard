@@ -4,7 +4,7 @@ import unittest
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[3]
-SERVICE = (ROOT / 'src/main/kotlin/tribixbite/cleverkeys/EstonianSwipeService.kt').read_text()
+SERVICE = (ROOT / 'src/main/kotlin/tribixbite/cleverkeys/ViipioInputMethodService.kt').read_text()
 SCREEN = (ROOT / 'src/main/kotlin/tribixbite/cleverkeys/ui/settings/SettingsScreen.kt').read_text()
 ACTIVITY = (ROOT / 'src/main/kotlin/tribixbite/cleverkeys/activities/SettingsActivity.kt').read_text()
 VALUES = {node.get('name'): node.text for node in ET.parse(ROOT / 'res/values/strings.xml').getroot().findall('string')}

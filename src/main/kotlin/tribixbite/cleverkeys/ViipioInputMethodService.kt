@@ -55,7 +55,7 @@ import tribixbite.cleverkeys.swipe.GeometricEngineAdapter
 import tribixbite.cleverkeys.a11y.KeyboardGeometry as AdapterGeometry
 
 /** Independent IME boundary. The surface owns all coordinates; adapters never see an old layout. */
-class EstonianSwipeService : InputMethodService() {
+class ViipioInputMethodService : InputMethodService() {
     private var surface: KeyboardSurfaceView? = null
     private var editor: EditorInfo? = null
     private var epoch = 0L
@@ -331,7 +331,7 @@ class EstonianSwipeService : InputMethodService() {
         emojiScope = scope
         scope.launch {
             try {
-                val loaded = OfflineEmojiSearch.fromAssets(this@EstonianSwipeService)
+                val loaded = OfflineEmojiSearch.fromAssets(this@ViipioInputMethodService)
                 emojiSearch = loaded
                 emojiPanel?.setSearchIndex(loaded)
             } catch (_: Exception) {
@@ -341,7 +341,7 @@ class EstonianSwipeService : InputMethodService() {
         scope.launch {
             try {
                 val loaded = withContext(Dispatchers.IO) {
-                    ManualCompletions.fromBundledAssets(this@EstonianSwipeService)
+                    ManualCompletions.fromBundledAssets(this@ViipioInputMethodService)
                 }
                 manualCompletions = loaded
                 resolveDeferredPersonalOffer()
@@ -525,10 +525,10 @@ class EstonianSwipeService : InputMethodService() {
                             val correction = correctionTracker.onSwipeReplacedFromBar(previous.word, newWord)
                             correction?.rejected?.forEach { rejected ->
                                 rejected.traceId?.let { id ->
-                                    TelemetryRuntime.recordCorrection(this@EstonianSwipeService, id, info,
+                                    TelemetryRuntime.recordCorrection(this@ViipioInputMethodService, id, info,
                                         rejected.word, newWord, if (id == previous.id) "candidate" else "manual")
                                     if (id != previous.id) TelemetryRuntime.recordFinalization(
-                                        this@EstonianSwipeService, id, info, newWord)
+                                        this@ViipioInputMethodService, id, info, newWord)
                                 }
                             }
                             previous.word = newWord
@@ -574,7 +574,7 @@ class EstonianSwipeService : InputMethodService() {
                 val lang = if (current.language == KeyboardLanguage.ESTONIAN) "et" else "en"
                 if (added != null) {
                     if (!personalWords.remove(lang, current.word)) {
-                        Toast.makeText(this@EstonianSwipeService,
+                        Toast.makeText(this@ViipioInputMethodService,
                             R.string.viipio_inline_word_unavailable, Toast.LENGTH_SHORT).show()
                     }
                     addedPersonalWord = null
@@ -591,7 +591,7 @@ class EstonianSwipeService : InputMethodService() {
                     }.getOrDefault(false)) {
                     if (personalWords.add(lang, offer.word) == ViipioPersonalWords.AddResult.ADDED) {
                         addedPersonalWord = offer
-                    } else Toast.makeText(this@EstonianSwipeService,
+                    } else Toast.makeText(this@ViipioInputMethodService,
                         R.string.viipio_inline_word_unavailable, Toast.LENGTH_SHORT).show()
                 }
                 personalOffer = null

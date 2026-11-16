@@ -2,7 +2,7 @@ from pathlib import Path
 import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
-SOURCE = ROOT / 'src/main/kotlin/tribixbite/cleverkeys/EstonianSwipeService.kt'
+SOURCE = ROOT / 'src/main/kotlin/tribixbite/cleverkeys/ViipioInputMethodService.kt'
 
 
 class ManualDiagnosticsRouteTest(unittest.TestCase):

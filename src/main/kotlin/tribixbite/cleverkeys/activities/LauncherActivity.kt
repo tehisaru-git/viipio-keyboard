@@ -60,7 +60,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
-import tribixbite.cleverkeys.theme.EstonianSwipeTheme
+import tribixbite.cleverkeys.theme.ViipioTheme
 
 /** Minimal setup shell. The IME's swipe backend remains separate from this Compose UI. */
 class LauncherActivity : ComponentActivity() {
@@ -99,7 +99,7 @@ class LauncherActivity : ComponentActivity() {
             ?.setBackgroundColor(android.graphics.Color.TRANSPARENT)
 
         setContent {
-            EstonianSwipeTheme {
+            ViipioTheme {
                 LauncherScreen(
                     onEnableKeyboard = ::launchKeyboardSettings,
                     onSelectKeyboard = ::launchInputMethodPicker,

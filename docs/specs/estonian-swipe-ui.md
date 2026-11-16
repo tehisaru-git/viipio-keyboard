@@ -1,10 +1,6 @@
 # Viipio keyboard: independent keyboard surface
 
-The project was previously called Estonian Swipe. The public product name and
-repository may change, but the Android application ID
-`io.github.tehisaru.estonianswipe` and release signing identity must stay stable
-so existing installations can update without losing data. The legacy internal
-class and source-file names are not user-facing brand elements.
+The project was previously called Estonian Swipe. This document preserves the earlier UI design decisions, including the original package-ID continuity requirement for v0.1.0–v0.6.0. **Superseded for v0.7.0:** the owner explicitly requested a language-neutral Android App ID, `io.github.tehisaru.viipio`. This is a separate app that cannot update `io.github.tehisaru.estonianswipe` in place or inherit its private data. The original developer release signing identity remains attached only to historical v0.6.0 and earlier releases; v0.7.0 uses a new Viipio-named release certificate. Language-specific ET layout and diagnostics contracts remain valid.
 
 ## Product boundary
 

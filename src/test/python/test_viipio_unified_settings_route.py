@@ -8,7 +8,7 @@ NS = {'a': 'http://schemas.android.com/apk/res/android'}
 MANIFEST = ET.parse(ROOT / 'AndroidManifest.xml').getroot()
 SCREEN = (ROOT / 'src/main/kotlin/tribixbite/cleverkeys/ui/settings/SettingsScreen.kt').read_text()
 ACTIVITY = (ROOT / 'src/main/kotlin/tribixbite/cleverkeys/activities/SettingsActivity.kt').read_text()
-SERVICE = (ROOT / 'src/main/kotlin/tribixbite/cleverkeys/EstonianSwipeService.kt').read_text()
+SERVICE = (ROOT / 'src/main/kotlin/tribixbite/cleverkeys/ViipioInputMethodService.kt').read_text()
 
 
 class UnifiedSettingsRouteTest(unittest.TestCase):

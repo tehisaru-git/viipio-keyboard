@@ -10,7 +10,7 @@ This is suggested public-facing copy and a checklist, **not** a claim that GitHu
 
 **Suggested topics:** `android-keyboard`, `offline`, `open-source`, `swipe-typing`. State ET/EN in the current-capabilities section, not the product tags.
 
-Viipio is a language-neutral product name; ET and EN describe the **current preview**, not an all-languages or French release. The Android package ID `io.github.tehisaru.estonianswipe` remains unchanged for update compatibility. The GPL-3.0 source snapshot derives from [CleverKeys](https://github.com/tribixbite/CleverKeys); see [NOTICE](../NOTICE) and the [archived upstream README](../UPSTREAM_README.md). Do not present inherited CleverKeys modules or documentation as active Viipio features.
+Viipio is a language-neutral product name; ET and EN describe the **current preview**, not an all-languages or French release. Starting with v0.7.0 the Android App ID is `io.github.tehisaru.viipio`; the historical `io.github.tehisaru.estonianswipe` package remains in older releases and cannot update in place to the new app. The GPL-3.0 source snapshot derives from [CleverKeys](https://github.com/tribixbite/CleverKeys); see [NOTICE](../NOTICE) and the [archived upstream README](../UPSTREAM_README.md). Do not present inherited CleverKeys modules or documentation as active Viipio features.
 
 ## Social preview (optional)
 

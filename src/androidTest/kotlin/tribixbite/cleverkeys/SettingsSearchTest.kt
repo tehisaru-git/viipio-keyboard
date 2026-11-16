@@ -133,11 +133,11 @@ class SettingsSearchTest {
         Thread.sleep(1500)
 
         // No crash = pass. Header may scroll off-screen so check package is still foreground.
-        // startsWith covers both release (tribixbite.cleverkeys) and debug (.debug suffix).
+        // Assert the app's real applicationId, including the debug suffix when present.
         val pkg = device.currentPackageName ?: ""
         assertTrue(
             "Settings activity should still be running, got pkg=$pkg",
-            pkg.startsWith("tribixbite.cleverkeys")
+            pkg == BuildConfig.APPLICATION_ID
         )
     }
 
@@ -160,7 +160,7 @@ class SettingsSearchTest {
         val pkg = device.currentPackageName ?: ""
         assertTrue(
             "Settings activity should still be running after gated search tap, got pkg=$pkg",
-            pkg.startsWith("tribixbite.cleverkeys")
+            pkg == BuildConfig.APPLICATION_ID
         )
     }
 
@@ -249,7 +249,7 @@ class SettingsSearchTest {
         val pkg = device.currentPackageName ?: ""
         assertTrue(
             "Settings should remain foreground after tapping an auto-indexed result, got pkg=$pkg",
-            pkg.startsWith("tribixbite.cleverkeys")
+            pkg == BuildConfig.APPLICATION_ID
         )
     }
 }

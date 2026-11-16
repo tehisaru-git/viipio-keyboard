@@ -68,14 +68,14 @@ class ReleaseMetadataDriftTest {
         // This source snapshot ships a separately signed Viipio APK, not the inherited
         // CleverKeys/F-Droid release channel. Do not require new CleverKeys fastlane files
         // or copy its thirteen-language claims into Viipio's ET/EN release notes.
-        if (buildGradle.readText().contains("applicationId \"io.github.tehisaru.estonianswipe\"")) {
+        if (buildGradle.readText().contains("applicationId \"io.github.tehisaru.viipio\"")) {
             val version = listOf("MAJOR", "MINOR", "PATCH")
                 .joinToString(".") { versionPart(it, buildGradle.readText()).toString() }
             val note = File("docs/releases/v$version.md")
             assertTrue("Viipio v$version must have its own release verification note", note.isFile)
             val text = note.readText()
             assertTrue("Viipio note must identify the tested APK version", text.contains("v$version"))
-            assertTrue("Viipio note must name its stable package ID", text.contains("io.github.tehisaru.estonianswipe"))
+            assertTrue("Viipio note must name its current package ID", text.contains("io.github.tehisaru.viipio"))
             assertTrue("Viipio note must distinguish a local candidate from a public release",
                 text.contains("NOT published") || text.contains("Published GitHub Release"))
             assertTrue("Viipio note must state the active input languages",

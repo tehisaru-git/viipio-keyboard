@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
-# Body for every `reactivecircus/android-emulator-runner` `script:` step in
-# .github/workflows/ui-testing.yml.
+# Historical emulator-runner helper. No UI-testing workflow is enabled in this
+# Viipio fork; if reinstated, this script targets the new debug App ID and IME.
 #
 # ## Why this is a file and not inline YAML
 #
@@ -34,8 +34,8 @@ MODE="${1:?usage: emulator-ci.sh gate|capture|a11y}"
 
 # The debug build applies applicationIdSuffix '.debug'; component classes keep their
 # original (non-suffixed) fully-qualified names.
-PKG=tribixbite.cleverkeys.debug
-IME_COMPONENT="$PKG/tribixbite.cleverkeys.CleverKeysService"
+PKG=io.github.tehisaru.viipio.debug
+IME_COMPONENT="$PKG/tribixbite.cleverkeys.ViipioInputMethodService"
 
 echo "Installing APK: ${APK_FILE:?APK_FILE not set}"
 adb install "$APK_FILE"
@@ -62,7 +62,7 @@ adb shell ime set "$IME_COMPONENT"
 
 # Hard-assert the IME registered — a silent no-op used to pass here.
 adb shell dumpsys input_method | grep -q "$PKG" \
-  || { echo "::error::CleverKeys IME not registered"; exit 1; }
+  || { echo "::error::Viipio IME not registered"; exit 1; }
 
 # `adb shell` on API 21 predates exit-code propagation and has no `pidof`, so this check is
 # vacuous there and real on 29/34. The instrumented verdict below is parsed host-side from

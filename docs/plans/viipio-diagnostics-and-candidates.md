@@ -1,10 +1,10 @@
 # Viipio keyboard: verified corrections, swipe→tap spacing, long candidates
 
-This is an implementation contract, **not** a claim that every case ships. It applies only to the active `EstonianSwipeService` and its explicit local diagnostics consent. The Gboard comparison below is behavioral; copy no Google code, assets, models or dictionaries.
+This is an implementation contract, **not** a claim that every case ships. It applies only to the active `ViipioInputMethodService` and its explicit local diagnostics consent. The Gboard comparison below is behavioral; copy no Google code, assets, models or dictionaries.
 
 ## Current behavior and failure boundary
 
-- A swipe trace records ET candidates, chosen word, geometry and sampled path in the encrypted local store if and only if collection is explicitly enabled and `TelemetryPolicy` accepts the field. Immediate verified candidate replacement and Backspace-undo followed by a verified retyped word can be linked to that trace (`EstonianSwipeService.kt`, `SwipeCorrectionTracker.kt`, `TelemetryController.kt`).
+- A swipe trace records ET candidates, chosen word, geometry and sampled path in the encrypted local store if and only if collection is explicitly enabled and `TelemetryPolicy` accepts the field. Immediate verified candidate replacement and Backspace-undo followed by a verified retyped word can be linked to that trace (`ViipioInputMethodService.kt`, `SwipeCorrectionTracker.kt`, `TelemetryController.kt`).
 - The service remembers one active `loggedSwipe`, finalizes it before the next swipe, and forgets it on external cursor motion. A later edit to the prior or penultimate word **is not attributable today**. A matching spelling at another position does not prove identity; never infer a correction from it.
 - `ManualTypingPolicy.commitLetterAfterSwipe` already tries to add a space with the first tapped letter when the collapsed caret still follows the exact swipe word. An editor that rejects the combined write gets the letter only. The in-progress branch adds an enabled-by-default switch for the active IME; do not force a separator in password/URL fields, a moved cursor, after existing whitespace/punctuation, or when the user has selected text.
 

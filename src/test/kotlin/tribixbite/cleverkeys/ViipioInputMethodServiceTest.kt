@@ -28,7 +28,7 @@ import tribixbite.cleverkeys.estonianemoji.EmojiPanelView
 import tribixbite.cleverkeys.a11y.KeyboardGeometry as AdapterGeometry
 
 @RunWith(RobolectricTestRunner::class)
-class EstonianSwipeServiceTest {
+class ViipioInputMethodServiceTest {
     private fun tap(geometry: KeyboardGeometry, kind: KeyKind, label: String? = null, timeMs: Long = 0L) =
         SurfaceGesture.Tap(geometry.keys.first { it.kind == kind && (label == null || it.label == label) }, geometry.language, timeMs)
 
@@ -132,7 +132,7 @@ class EstonianSwipeServiceTest {
     }
 
     @Test fun activeImeReflectsManualShiftAndCapsLockOnVisibleSurface() {
-        val service = Robolectric.buildService(EstonianSwipeService::class.java).get()
+        val service = Robolectric.buildService(ViipioInputMethodService::class.java).get()
         val layout = service.onCreateInputView() as LinearLayout
         val view = layout.getChildAt(2) as KeyboardSurfaceView
         service.onStartInput(EditorInfo().apply { inputType = InputType.TYPE_CLASS_TEXT }, false)
@@ -252,7 +252,7 @@ class EstonianSwipeServiceTest {
     }
 
     @Test fun emojiBrowseAndSearchReuseKeyboardHeightWithoutHidingEditor() {
-        val service = Robolectric.buildService(EstonianSwipeService::class.java).get()
+        val service = Robolectric.buildService(ViipioInputMethodService::class.java).get()
         val layout = service.onCreateInputView() as LinearLayout
         val bar = layout.getChildAt(0)
         val panel = layout.getChildAt(1) as EmojiPanelView
@@ -274,7 +274,7 @@ class EstonianSwipeServiceTest {
     }
 
     @Test fun longCandidatesStayInOneStableRowAndAreFullyReachable() {
-        val service = Robolectric.buildService(EstonianSwipeService::class.java).get()
+        val service = Robolectric.buildService(ViipioInputMethodService::class.java).get()
         val layout = service.onCreateInputView() as LinearLayout
         val strip = layout.getChildAt(0) as FrameLayout
         val row = strip.getChildAt(1) as LinearLayout
@@ -298,7 +298,7 @@ class EstonianSwipeServiceTest {
 
     @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
     @Test fun longCandidateWordsStayWholeAndTheStripScrollsSideways() {
-        val service = Robolectric.buildService(EstonianSwipeService::class.java).get()
+        val service = Robolectric.buildService(ViipioInputMethodService::class.java).get()
         val layout = service.onCreateInputView() as LinearLayout
         val bar = layout.getChildAt(0) as FrameLayout
         val candidates = bar.getChildAt(1) as LinearLayout
@@ -329,7 +329,7 @@ class EstonianSwipeServiceTest {
 
     @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
     @Test fun shortCandidatesCannotScrollWhenAllWordsFitTheRow() {
-        val service = Robolectric.buildService(EstonianSwipeService::class.java).get()
+        val service = Robolectric.buildService(ViipioInputMethodService::class.java).get()
         val layout = service.onCreateInputView() as LinearLayout
         val candidates = (layout.getChildAt(0) as FrameLayout).getChildAt(1) as LinearLayout
         candidates.visibility = View.VISIBLE
@@ -356,7 +356,7 @@ class EstonianSwipeServiceTest {
 
     @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
     @Test fun draggingAnOverflowingRowNeverClicksAWord() {
-        val service = Robolectric.buildService(EstonianSwipeService::class.java).get()
+        val service = Robolectric.buildService(ViipioInputMethodService::class.java).get()
         val layout = service.onCreateInputView() as LinearLayout
         val row = (layout.getChildAt(0) as FrameLayout).getChildAt(1) as LinearLayout
         row.visibility = View.VISIBLE
@@ -391,7 +391,7 @@ class EstonianSwipeServiceTest {
 
     @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
     @Test fun rebindingFitOverflowFitResetsScrollAndSpreadsShortWordsAgain() {
-        val service = Robolectric.buildService(EstonianSwipeService::class.java).get()
+        val service = Robolectric.buildService(ViipioInputMethodService::class.java).get()
         val layout = service.onCreateInputView() as LinearLayout
         val row = (layout.getChildAt(0) as FrameLayout).getChildAt(1) as LinearLayout
         row.visibility = View.VISIBLE
@@ -422,7 +422,7 @@ class EstonianSwipeServiceTest {
 
     @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
     @Test fun fittingMixedLengthWordsGiveTheLongWordItsFullNaturalWidth() {
-        val service = Robolectric.buildService(EstonianSwipeService::class.java).get()
+        val service = Robolectric.buildService(ViipioInputMethodService::class.java).get()
         val layout = service.onCreateInputView() as LinearLayout
         val row = (layout.getChildAt(0) as FrameLayout).getChildAt(1) as LinearLayout
         row.visibility = View.VISIBLE
@@ -458,7 +458,7 @@ class EstonianSwipeServiceTest {
     }
 
     @Test fun inlinePersonalWordOfferFitsExistingToolbarAndStartsHidden() {
-        val service = Robolectric.buildService(EstonianSwipeService::class.java).get()
+        val service = Robolectric.buildService(ViipioInputMethodService::class.java).get()
         val layout = service.onCreateInputView() as LinearLayout
         val bar = layout.getChildAt(0) as FrameLayout
         val offer = (0 until bar.childCount).map { bar.getChildAt(it) }
@@ -472,7 +472,7 @@ class EstonianSwipeServiceTest {
     }
 
     @Test fun candidateNavigationHasAccessibleTouchAreaWithoutGrowingIme() {
-        val service = Robolectric.buildService(EstonianSwipeService::class.java).get()
+        val service = Robolectric.buildService(ViipioInputMethodService::class.java).get()
         val layout = service.onCreateInputView() as LinearLayout
         val bar = layout.getChildAt(0) as FrameLayout
         val keys = layout.getChildAt(2) as KeyboardSurfaceView
@@ -487,7 +487,7 @@ class EstonianSwipeServiceTest {
     }
 
     @Test fun inputViewKeepsToolbarAndCandidatesInOneFixedHeightSlot() {
-        val service = Robolectric.buildService(EstonianSwipeService::class.java).get()
+        val service = Robolectric.buildService(ViipioInputMethodService::class.java).get()
         val layout = service.onCreateInputView() as LinearLayout
         assertEquals(3, layout.childCount)
         val bar = layout.getChildAt(0) as FrameLayout
@@ -510,7 +510,7 @@ class EstonianSwipeServiceTest {
     }
 
     @Test fun recreatingInputViewResetsToolbarCompactState() {
-        val service = Robolectric.buildService(EstonianSwipeService::class.java).get()
+        val service = Robolectric.buildService(ViipioInputMethodService::class.java).get()
         fun toolbar() = ((service.onCreateInputView() as LinearLayout).getChildAt(0) as FrameLayout)
             .getChildAt(0) as LinearLayout
         val first = toolbar()
@@ -523,7 +523,7 @@ class EstonianSwipeServiceTest {
     }
 
     @Test fun toolbarLanguageSwitchPreservesKeyboardHeightAndChangesDecoderLayout() {
-        val service = Robolectric.buildService(EstonianSwipeService::class.java).get()
+        val service = Robolectric.buildService(ViipioInputMethodService::class.java).get()
         val layout = service.onCreateInputView() as LinearLayout
         val bar = layout.getChildAt(0) as FrameLayout
         val toolbar = bar.getChildAt(0) as LinearLayout
@@ -550,7 +550,7 @@ class EstonianSwipeServiceTest {
     }
 
     @Test fun emojiSearchIsAnIndependentOfflinePanelNotAnInputMethodTextField() {
-        val source = java.io.File("src/main/kotlin/tribixbite/cleverkeys/EstonianSwipeService.kt").readText()
+        val source = java.io.File("src/main/kotlin/tribixbite/cleverkeys/ViipioInputMethodService.kt").readText()
         assertTrue(source.contains("OfflineEmojiSearch.fromAssets("))
         assertTrue(source.contains("EmojiPanelView(this)"))
         assertTrue(source.contains("panel.appendQuery("))
@@ -558,14 +558,14 @@ class EstonianSwipeServiceTest {
     }
 
     @Test fun inputViewAndCaretChangesInvalidatePendingDecode() {
-        val source = java.io.File("src/main/kotlin/tribixbite/cleverkeys/EstonianSwipeService.kt").readText()
+        val source = java.io.File("src/main/kotlin/tribixbite/cleverkeys/ViipioInputMethodService.kt").readText()
         assertTrue(source.contains("override fun onFinishInputView("))
         assertTrue(source.contains("override fun onUpdateSelection("))
         assertTrue(source.contains("surface?.onGesture = null"))
     }
 
     @Test fun glideDeleteOwnedUndoRestoresCaretEvidenceAfterClearingCandidates() {
-        val source = java.io.File("src/main/kotlin/tribixbite/cleverkeys/EstonianSwipeService.kt").readText()
+        val source = java.io.File("src/main/kotlin/tribixbite/cleverkeys/ViipioInputMethodService.kt").readText()
         val branch = source.substringAfter("is SurfaceGesture.DeleteWord -> {")
             .substringBefore("is SurfaceGesture.RepeatBackspace -> {")
         assertTrue("DeleteWord must restore verified caret AFTER clearSuggestions() resets it",
@@ -574,7 +574,7 @@ class EstonianSwipeServiceTest {
     }
 
     @Test fun ctcChecksAllEligibilityGatesBeforeDispatch() {
-        val source = java.io.File("src/main/kotlin/tribixbite/cleverkeys/EstonianSwipeService.kt").readText()
+        val source = java.io.File("src/main/kotlin/tribixbite/cleverkeys/ViipioInputMethodService.kt").readText()
         val gate = source.substringAfter("val eligible =")
         assertTrue(gate.contains("engine.hasLexiconSource(language)"))
         assertTrue(gate.contains("engine.isModelPermanentlyUnavailable(language)"))
@@ -595,7 +595,7 @@ class EstonianSwipeServiceTest {
         sink.forget()
         assertTrue(connection.commitText(" ", 1))
         assertEquals("tore ", field.text.toString())
-        val serviceSource = java.io.File("src/main/kotlin/tribixbite/cleverkeys/EstonianSwipeService.kt").readText()
+        val serviceSource = java.io.File("src/main/kotlin/tribixbite/cleverkeys/ViipioInputMethodService.kt").readText()
         assertFalse(serviceSource.contains("currentInputConnection?.finishComposingText()"))
     }
 
@@ -656,18 +656,18 @@ class EstonianSwipeServiceTest {
                 return true
             }
         }
-        assertTrue(EstonianSwipeService.submitEnter(connection, EditorInfo.IME_ACTION_SEND))
+        assertTrue(ViipioInputMethodService.submitEnter(connection, EditorInfo.IME_ACTION_SEND))
         assertEquals(listOf(KeyEvent.ACTION_DOWN to KeyEvent.KEYCODE_ENTER,
             KeyEvent.ACTION_UP to KeyEvent.KEYCODE_ENTER), events)
     }
 
     @Test fun measuredSurfaceWarmsEstonianDecoderBeforeFirstSwipe() {
-        val source = java.io.File("src/main/kotlin/tribixbite/cleverkeys/EstonianSwipeService.kt").readText()
+        val source = java.io.File("src/main/kotlin/tribixbite/cleverkeys/ViipioInputMethodService.kt").readText()
         assertTrue(source.contains("engine.warmUpAsync(source, params"))
     }
 
     @Test fun serviceInitializesDecoderConfigOnColdStart() {
-        val source = java.io.File("src/main/kotlin/tribixbite/cleverkeys/EstonianSwipeService.kt").readText()
+        val source = java.io.File("src/main/kotlin/tribixbite/cleverkeys/ViipioInputMethodService.kt").readText()
         assertTrue(source.contains("Config.initGlobalConfig("))
         assertTrue(source.contains("CtcInstalledPacks.bind(this)"))
     }
@@ -705,9 +705,9 @@ class EstonianSwipeServiceTest {
             setText("üks kaks "); setSelection(text.length)
         }
         val connection = field.onCreateInputConnection(EditorInfo())
-        assertTrue(EstonianSwipeService.deletePreviousWord(connection))
+        assertTrue(ViipioInputMethodService.deletePreviousWord(connection))
         assertEquals("üks ", field.text.toString())
-        assertTrue(EstonianSwipeService.deletePreviousWord(connection))
+        assertTrue(ViipioInputMethodService.deletePreviousWord(connection))
         assertEquals("", field.text.toString())
     }
 
@@ -717,7 +717,7 @@ class EstonianSwipeServiceTest {
         val blind = object : InputConnectionWrapper(base, false) {
             override fun getExtractedText(request: android.view.inputmethod.ExtractedTextRequest?, flags: Int) = null
         }
-        assertFalse(EstonianSwipeService.deletePreviousWord(blind))
+        assertFalse(ViipioInputMethodService.deletePreviousWord(blind))
         assertEquals("tere", field.text.toString())
     }
 
@@ -726,7 +726,7 @@ class EstonianSwipeServiceTest {
         field.setText("foo foo")
         field.setSelection(field.length())
         val connection = offsetConnection(field)
-        assertTrue(EstonianSwipeService.deletePreviousWord(connection))
+        assertTrue(ViipioInputMethodService.deletePreviousWord(connection))
         assertEquals("foo ", field.text.toString())
     }
 
@@ -785,7 +785,7 @@ class EstonianSwipeServiceTest {
                 return super.deleteSurroundingTextInCodePoints(beforeLength, afterLength)
             }
         }
-        assertTrue(EstonianSwipeService.deleteBackward(connection))
+        assertTrue(ViipioInputMethodService.deleteBackward(connection))
         assertEquals("a", field.text.toString())
         assertEquals(0, codePointDeletes)
     }
@@ -800,7 +800,7 @@ class EstonianSwipeServiceTest {
                 return super.deleteSurroundingTextInCodePoints(beforeLength, afterLength)
             }
         }
-        assertFalse(EstonianSwipeService.deleteBackward(connection))
+        assertFalse(ViipioInputMethodService.deleteBackward(connection))
         assertEquals(0, deletes)
     }
 
@@ -809,15 +809,15 @@ class EstonianSwipeServiceTest {
         field.setText("a😀b")
         val connection = field.onCreateInputConnection(EditorInfo())
         field.setSelection(1, 3) // the surrogate pair is selected
-        assertTrue(EstonianSwipeService.deleteBackward(connection))
+        assertTrue(ViipioInputMethodService.deleteBackward(connection))
         assertEquals("ab", field.text.toString())
         field.setSelection(1)
-        assertTrue(EstonianSwipeService.deleteBackward(connection))
+        assertTrue(ViipioInputMethodService.deleteBackward(connection))
         assertEquals("b", field.text.toString())
     }
 
     @Test fun pinEditorUsesDigitOnlyKeypadInsteadOfAlphabetAndHidesToolbar() {
-        val service = Robolectric.buildService(EstonianSwipeService::class.java).get()
+        val service = Robolectric.buildService(ViipioInputMethodService::class.java).get()
         val layout = service.onCreateInputView() as LinearLayout
         val info = EditorInfo().apply {
             inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
@@ -841,7 +841,7 @@ class EstonianSwipeServiceTest {
     }
 
     @Test fun integerNumberFieldUsesKeypadThenRestoresLettersForText() {
-        val service = Robolectric.buildService(EstonianSwipeService::class.java).get()
+        val service = Robolectric.buildService(ViipioInputMethodService::class.java).get()
         val layout = service.onCreateInputView() as LinearLayout
         val numeric = EditorInfo().apply { inputType = InputType.TYPE_CLASS_NUMBER }
         service.onStartInput(numeric, false)
@@ -860,7 +860,7 @@ class EstonianSwipeServiceTest {
     }
 
     @Test fun decimalAndSignedNumberFieldsExposeOnlyRequestedSeparators() {
-        val service = Robolectric.buildService(EstonianSwipeService::class.java).get()
+        val service = Robolectric.buildService(ViipioInputMethodService::class.java).get()
         val layout = service.onCreateInputView() as LinearLayout
         val surface = layout.getChildAt(2) as KeyboardSurfaceView
         surface.layout(0, 0, 330, 286)
@@ -884,7 +884,7 @@ class EstonianSwipeServiceTest {
     }
 
     @Test fun phoneAndDateTimeEditorsUseSpecializedNumericKeys() {
-        val service = Robolectric.buildService(EstonianSwipeService::class.java).get()
+        val service = Robolectric.buildService(ViipioInputMethodService::class.java).get()
         val layout = service.onCreateInputView() as LinearLayout
         val surface = layout.getChildAt(2) as KeyboardSurfaceView
         surface.layout(0, 0, 337, 286)
@@ -912,7 +912,7 @@ class EstonianSwipeServiceTest {
     }
 
     @Test fun heldBackspaceStopsBeforeSwitchingBetweenPinEditors() {
-        val service = Robolectric.buildService(EstonianSwipeService::class.java).get()
+        val service = Robolectric.buildService(ViipioInputMethodService::class.java).get()
         val layout = service.onCreateInputView() as LinearLayout
         val first = EditorInfo().apply { inputType = InputType.TYPE_CLASS_NUMBER or
             InputType.TYPE_NUMBER_VARIATION_PASSWORD }
@@ -937,19 +937,19 @@ class EstonianSwipeServiceTest {
             InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD)
         for (variation in variations) {
             val editor = EditorInfo().apply { inputType = InputType.TYPE_CLASS_TEXT or variation }
-            assertFalse("password variation $variation", EstonianSwipeService.isSwipeAllowed(editor))
+            assertFalse("password variation $variation", ViipioInputMethodService.isSwipeAllowed(editor))
         }
         val numeric = EditorInfo().apply {
             inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
         }
-        assertFalse(EstonianSwipeService.isSwipeAllowed(numeric))
+        assertFalse(ViipioInputMethodService.isSwipeAllowed(numeric))
         val ordinary = EditorInfo().apply { inputType = InputType.TYPE_CLASS_TEXT }
-        assertTrue(EstonianSwipeService.isSwipeAllowed(ordinary))
+        assertTrue(ViipioInputMethodService.isSwipeAllowed(ordinary))
     }
 
     @Test fun adapterCellsMatchSurfaceCellsIncludingOddPixelWidths() {
         val board = KeyboardGeometry(301, 233, KeyboardLanguage.ESTONIAN)
-        val keyboard = EstonianSwipeService.adapterKeyboard(board)
+        val keyboard = ViipioInputMethodService.adapterKeyboard(board)
         val rects = AdapterGeometry.computeKeyRects(keyboard, AdapterGeometry.Params(1f, 1f, 0f, 0f))
         assertEquals(board.keys.size, rects.size)
         board.keys.zip(rects).forEach { (key, rect) ->

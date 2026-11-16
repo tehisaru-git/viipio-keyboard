@@ -11,7 +11,7 @@ import xml.etree.ElementTree as ET
 ROOT = Path(__file__).resolve().parents[1]
 REPORTS = ROOT / "build/test-results/testDebugUnitTest"
 TARGETED = (
-    "tribixbite.cleverkeys.EstonianSwipeServiceTest",
+    "tribixbite.cleverkeys.ViipioInputMethodServiceTest",
     "tribixbite.cleverkeys.estonianui.KeyboardSurfaceTest",
     "tribixbite.cleverkeys.estonianui.KeyboardSurfaceViewTest",
     "tribixbite.cleverkeys.ViipioTypedWordTrackerTest",

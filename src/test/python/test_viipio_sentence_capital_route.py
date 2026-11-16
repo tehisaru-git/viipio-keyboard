@@ -11,7 +11,7 @@ class SentenceCapitalizationRouteTest(unittest.TestCase):
         self.assertTrue(preference_path.is_file(), 'sentence-capital preference missing')
         pref = preference_path.read_text()
         settings = (MAIN / 'ui/settings/SettingsScreen.kt').read_text()
-        service = (MAIN / 'EstonianSwipeService.kt').read_text()
+        service = (MAIN / 'ViipioInputMethodService.kt').read_text()
         self.assertIn('const val DEFAULT = false', pref)
         self.assertIn('ViipioSentenceCapitalPreference.KEY', settings)
         self.assertIn('R.string.viipio_sentence_capital_title', settings)

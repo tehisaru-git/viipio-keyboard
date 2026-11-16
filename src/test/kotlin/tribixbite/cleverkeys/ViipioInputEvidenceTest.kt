@@ -14,7 +14,7 @@ import tribixbite.cleverkeys.estoniantelemetry.*
 @RunWith(RobolectricTestRunner::class)
 class ViipioInputEvidenceTest {
     @Test fun activeServiceWiresOnlyOwnActionPathsNotSelectionOrEditorObservations() {
-        val source = java.io.File("src/main/kotlin/tribixbite/cleverkeys/EstonianSwipeService.kt").readText()
+        val source = java.io.File("src/main/kotlin/tribixbite/cleverkeys/ViipioInputMethodService.kt").readText()
         val selection = source.substringAfter("override fun onUpdateSelection(")
             .substringBefore("override fun onDestroy()")
         assertFalse(selection.contains("recordInputEvent("))

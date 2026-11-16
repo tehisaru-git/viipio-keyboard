@@ -3,7 +3,7 @@ from pathlib import Path
 import unittest
 
 SOURCE = (Path(__file__).resolve().parents[3] /
-          'src/main/kotlin/tribixbite/cleverkeys/EstonianSwipeService.kt').read_text()
+          'src/main/kotlin/tribixbite/cleverkeys/ViipioInputMethodService.kt').read_text()
 
 
 class ManualCandidateRoutingTest(unittest.TestCase):

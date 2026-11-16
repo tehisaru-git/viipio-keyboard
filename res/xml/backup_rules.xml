@@ -21,7 +21,7 @@
   - emoji_last_use.xml       recently-used emoji ordering (non-PII)
 
   What is NOT backed up (implicitly excluded by allowlist mode):
-  - The main settings file (tribixbite.cleverkeys_preferences.xml) and all
+  - The main settings file (io.github.tehisaru.viipio_preferences.xml) and all
     other SharedPreferences (privacy_settings, personalization/adaptation,
     user_dictionary, swipe selection stats, bigram store, etc.)
   - ALL databases (clipboard history, ML training data)

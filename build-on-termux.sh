@@ -1,6 +1,6 @@
 #!/data/data/com.termux/files/usr/bin/bash
 #
-# Build script for CleverKeys on Termux ARM64.
+# Build script for Viipio keyboard on Termux ARM64.
 # Handles JDK/SDK env, Termux-native aapt2, optional ADB install.
 #
 # ALL Gradle execution goes through scripts/gradle-guard.sh (device-wide
@@ -56,7 +56,7 @@ BUILD_TYPE="${BUILD_TYPE:-release}"
 say()  { printf '%s\n' "$*"; }
 fail() { echo "Error: $*" >&2; exit 1; }
 
-echo "=== CleverKeys Termux Build Script ==="
+echo "=== Viipio keyboard Termux Build Script ==="
 echo "Building $BUILD_TYPE APK on Termux ARM64"
 echo
 
@@ -286,7 +286,7 @@ connect_adb_wireless() {
 }
 
 # Install package id (with .debug suffix for debug builds, see build.gradle).
-PKG_BASE="tribixbite.cleverkeys"
+PKG_BASE="io.github.tehisaru.viipio"
 PKG_INSTALL="$PKG_BASE"
 [ "$BUILD_TYPE" = "debug" ] && PKG_INSTALL="$PKG_BASE.debug"
 
@@ -328,7 +328,7 @@ if [ $INSTALL_RC -eq 0 ]; then
     if [ "$BUILD_TYPE" = "debug" ]; then
         say "Installed as $PKG_INSTALL — separate from your prod $PKG_BASE install."
         say "Enable in: Settings → System → Languages & input → Virtual keyboard"
-        say "Look for 'CleverKeys (Debug)'."
+        say "Look for 'Viipio keyboard (Debug)'."
     fi
     exit 0
 fi
@@ -347,8 +347,8 @@ if echo "$INSTALL_OUTPUT" | grep -q "INSTALL_FAILED_UPDATE_INCOMPATIBLE\|signatu
         if [ "$USER_SUPPLIED_KEYSTORE" -eq 1 ]; then
             say "  You used your release keystore ($RELEASE_KEYSTORE), but it doesn't match"
             say "  whatever signed the currently-installed APK. Possibilities:"
-            say "    1. Installed APK came from F-Droid (different upstream signer)"
-            say "    2. Installed APK came from GitHub Releases (different signer)"
+            say "    1. Installed APK came from an unrelated signer or test key"
+            say "    2. Installed APK came from GitHub Releases (the Viipio signer)"
             say "    3. Your keystore changed since last install"
             say "  To install this build alongside the existing one, run: $0 debug"
         else

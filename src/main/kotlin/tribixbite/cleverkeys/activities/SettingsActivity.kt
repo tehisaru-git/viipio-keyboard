@@ -25,7 +25,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import tribixbite.cleverkeys.autocorrect.AutocorrectTuning
-import tribixbite.cleverkeys.theme.EstonianSwipeTheme
+import tribixbite.cleverkeys.theme.ViipioTheme
 import tribixbite.cleverkeys.langpack.LanguagePackManifest
 import tribixbite.cleverkeys.ui.settings.SearchableSetting
 import tribixbite.cleverkeys.ui.settings.expanderFor
@@ -883,7 +883,7 @@ class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPreferen
         try {
             setContent {
                 // #35: Follow system dark/light mode instead of forcing dark
-                EstonianSwipeTheme {
+                ViipioTheme {
                     SettingsScreen()
 
                     // Backup & Restore preview/result dialogs + loading overlay.

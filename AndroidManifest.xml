@@ -18,8 +18,8 @@
        Named after ${applicationId} so the debug package (.debug suffix, debug key) does not
        define the same permission as the release package: Android refuses to install a second,
        differently signed package that defines an existing permission name, which kept debug
-       and release from coexisting. Release still resolves to the v1.5.0 name
-       tribixbite.cleverkeys.permission.SET_DEBUG_MODE (ReleasePackagingDriftTest). -->
+       and release from coexisting. Release resolves to the current
+       ${applicationId}.permission.SET_DEBUG_MODE (ReleasePackagingDriftTest). -->
   <permission android:name="${applicationId}.permission.SET_DEBUG_MODE" android:protectionLevel="signature"/>
   <uses-permission android:name="${applicationId}.permission.SET_DEBUG_MODE"/>
 
@@ -27,9 +27,9 @@
   <!-- No explicit permission needed for app-specific directories (getExternalFilesDir()) -->
 
   <application android:label="@string/app_name" android:allowBackup="true" android:fullBackupContent="@xml/backup_rules" android:dataExtractionRules="@xml/data_extraction_rules" android:icon="@mipmap/ic_launcher" android:hardwareAccelerated="true" android:supportsRtl="true">
-    <!-- Original Estonian Swipe IME; CleverKeys decoding adapters remain internal. -->
-    <service android:name="tribixbite.cleverkeys.EstonianSwipeService"
-             android:label="@string/estonian_swipe_ime_label"
+    <!-- Viipio IME; CleverKeys decoding adapters remain internal. -->
+    <service android:name="tribixbite.cleverkeys.ViipioInputMethodService"
+             android:label="@string/viipio_ime_label"
              android:permission="android.permission.BIND_INPUT_METHOD"
              android:exported="true"
              android:theme="@style/CleverKeysIMETheme"

@@ -4,7 +4,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
 SCREEN = (ROOT / 'src/main/kotlin/tribixbite/cleverkeys/ui/settings/SettingsScreen.kt').read_text()
-SERVICE = (ROOT / 'src/main/kotlin/tribixbite/cleverkeys/EstonianSwipeService.kt').read_text()
+SERVICE = (ROOT / 'src/main/kotlin/tribixbite/cleverkeys/ViipioInputMethodService.kt').read_text()
 
 
 class DoubleSpaceRouteTest(unittest.TestCase):

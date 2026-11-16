@@ -29,10 +29,11 @@ class BasicInstrumentedTest {
     @Test
     fun testPackageName() {
         // Debug builds use `applicationIdSuffix '.debug'`; release uses the bare id.
-        // startsWith covers both flavors without per-build matchers.
+        // Check the entire ID so an unrelated package cannot satisfy this test.
         assertTrue(
-            "expected package id to start with tribixbite.cleverkeys, got ${context.packageName}",
-            context.packageName.startsWith("tribixbite.cleverkeys")
+            "expected Viipio package id (release or debug), got ${context.packageName}",
+            context.packageName == "io.github.tehisaru.viipio" ||
+                context.packageName == "io.github.tehisaru.viipio.debug"
         )
     }
 

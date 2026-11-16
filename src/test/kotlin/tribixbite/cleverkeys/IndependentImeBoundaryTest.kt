@@ -22,7 +22,7 @@ class IndependentImeBoundaryTest {
                 }
             }
         val className = active.getAttribute(androidName)
-        assertThat(className).isEqualTo("tribixbite.cleverkeys.EstonianSwipeService")
+        assertThat(className).isEqualTo("tribixbite.cleverkeys.ViipioInputMethodService")
         val implementation = File("src/main/kotlin/" + className.replace('.', '/') + ".kt")
         assertThat(implementation.exists()).isTrue()
         val source = implementation.readText()

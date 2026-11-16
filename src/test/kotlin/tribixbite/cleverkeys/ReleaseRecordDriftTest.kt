@@ -213,7 +213,7 @@ class ReleaseRecordDriftTest {
         // deliberately replaced; it is not a Viipio release promise. Keep checking
         // every published upstream anchor and every immutable history hash.
         val isViipioFork = File("build.gradle").readText()
-            .contains("applicationId \"io.github.tehisaru.estonianswipe\"")
+            .contains("applicationId \"io.github.tehisaru.viipio\"")
         val applicableRows = sections
             .filterNot { isViipioFork && it.version in PENDING_RELEASES }
             .flatMap { it.rows }

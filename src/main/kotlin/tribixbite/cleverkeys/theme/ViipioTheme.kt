@@ -8,7 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
 
-/** Original Estonian Swipe app-shell palette; does not alter the IME theme preference. */
+/** Viipio app-shell palette; does not alter the IME theme preference. */
 private val Light = lightColorScheme(
     primary = Color(0xFF395C84), onPrimary = Color.White,
     primaryContainer = Color(0xFFD9E7F6), onPrimaryContainer = Color(0xFF18344F),
@@ -31,7 +31,7 @@ private val Dark = darkColorScheme(
 )
 
 @Composable
-fun EstonianSwipeTheme(content: @Composable () -> Unit) {
+fun ViipioTheme(content: @Composable () -> Unit) {
     val dark = isSystemInDarkTheme()
     val scheme = if (dark) Dark else Light
     CompositionLocalProvider(LocalKeyboardColorScheme provides keyboardColorSchemeFromMaterial(

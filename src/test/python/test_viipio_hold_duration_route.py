@@ -8,7 +8,7 @@ MAIN = ROOT / 'src/main/kotlin/tribixbite/cleverkeys'
 class HoldDurationRouteTest(unittest.TestCase):
     def test_slider_is_in_active_preferences_and_ime(self):
         settings = (MAIN / 'ui/settings/SettingsScreen.kt').read_text()
-        service = (MAIN / 'EstonianSwipeService.kt').read_text()
+        service = (MAIN / 'ViipioInputMethodService.kt').read_text()
         view = (MAIN / 'estonianui/KeyboardSurfaceView.kt').read_text()
         pref = (MAIN / 'ViipioHoldDurationPreference.kt').read_text()
         self.assertTrue('ViipioHoldDurationPreference.KEY' in settings)

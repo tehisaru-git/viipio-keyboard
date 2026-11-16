@@ -95,7 +95,7 @@ class TelemetryActivity : Activity() {
             startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
                 addCategory(Intent.CATEGORY_OPENABLE)
                 type = "application/x-ndjson"
-                putExtra(Intent.EXTRA_TITLE, "estonian-swipe-diagnostics.jsonl")
+                putExtra(Intent.EXTRA_TITLE, "viipio-diagnostics.jsonl")
             }, CREATE_DOCUMENT)
         }
         button(R.string.telemetry_clear) {

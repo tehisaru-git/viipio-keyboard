@@ -6,6 +6,8 @@ Viipio is an experimental offline Android keyboard. Its name is language-neutral
 
 - [README](../README.md) — current install instructions, capabilities, limits and update compatibility.
 - [Viipio identity](branding/viipio.md) — name, artwork and branding guidance.
+- [v0.7.0 identity migration and verification](releases/v0.7.0.md) — neutral App ID, separate installation and remaining test gates.
+- [v0.7.0 GitHub release body](releases/v0.7.0-github.md) — experimental new-app APK and migration warnings.
 - [v0.6.0 release verification](releases/v0.6.0.md) — personal words, consented input evidence and limits.
 - [v0.6.0 GitHub release body](releases/v0.6.0-github.md) — experimental APK changes and prominent test warnings.
 - [v0.5.1 release verification](releases/v0.5.1.md) — previous update scope and remaining gaps.
