@@ -31,7 +31,8 @@ class ViipioReleaseMetadataTest(unittest.TestCase):
 
     def test_public_links_and_previous_name_migration_are_documented(self):
         self.assertIn("https://github.com/tehisaru-git/viipio-keyboard", README)
-        self.assertIn("v0.7.0 is an experimental release candidate", README)
+        self.assertIn("v0.7.0 is an experimental public test release", README)
+        self.assertNotIn("APK is not available", README)
         self.assertIn("ViipioKeyboard-v0.5.1-arm64-v8a.apk", README)
         self.assertIn("releases/tag/v0.5.1", README)
         self.assertIn("releases/tag/v0.6.0", README)
