@@ -8,17 +8,15 @@ import org.junit.Test
  * Pins v1.2.6 / v1.2.8's "Practice typing inside settings" (#1134) — the Test Keyboard
  * panel in Settings.
  *
- * Behaviourally ([panelStateSurvivesActivityRecreation]) the thing that can silently break
- * is where the panel's state lives: `mutableStateOf` on the Activity is destroyed on every
- * rotation, so a user practising in landscape would lose their text and see the panel snap
- * shut. It lives on [SettingsViewModel] instead, and that is asserted here by exercising the
- * real ViewModel.
+ * [legacyPanelStateIsHeldInViewModel] exercises the old panel's state holder and Activity
+ * delegation. It does **not** recreate an Activity, and it does not cover Viipio's active
+ * LauncherActivity practice text, which is transient `remember` state rather than saved state.
  *
- * The rest is a source/resource pin ([panelIsRenderedInSettings], [panelIsFindableInSearch],
- * [panelStringsExist]): a `@Composable` cannot be invoked from a JVM test — Compose UI tests
- * need an instrumented host — so the wiring that puts the field on screen, binds it to that
- * ViewModel state, clears it, and makes it findable from settings search is pinned by
- * scanning the composition. Those are exactly the edits that would remove the feature.
+ * The legacy panel's state/search/resource contracts below remain historical checks. Viipio's
+ * active Settings home now routes to the separate LauncherActivity practice editor, so
+ * [practiceIsReachableFromActiveSettingsHome] pins the current source route and field instead
+ * of falsely demanding the dormant TestKeyboardSection be composed into the new home. This is
+ * not an on-device navigation or practice-state-lifetime test.
  *
  * Mock tier: `SettingsViewModel`'s Compose state needs android.jar (the Android Compose
  * runtime's state factory implements `Parcelable`). Run with
@@ -41,7 +39,7 @@ class TestKeyboardSectionTest {
     // =========================================================================
 
     @Test
-    fun panelStateSurvivesActivityRecreation() {
+    fun legacyPanelStateIsHeldInViewModel() {
         val viewModel = SettingsViewModel()
 
         assertWithMessage("the practice field starts empty")
@@ -52,8 +50,7 @@ class TestKeyboardSectionTest {
         viewModel.testKeyboardText = "the quick brown fox"
         viewModel.testKeyboardExpanded = true
 
-        // The same ViewModel instance is handed back to the recreated Activity, so what a
-        // user typed is still there after a rotation.
+        // This only verifies state holder delegation; it does not perform a rotation.
         assertWithMessage("typed practice text must be held outside the Activity")
             .that(viewModel.testKeyboardText).isEqualTo("the quick brown fox")
         assertWithMessage("panel expansion must be held outside the Activity")
@@ -74,26 +71,18 @@ class TestKeyboardSectionTest {
     // =========================================================================
 
     @Test
-    fun panelIsRenderedInSettings() {
+    fun practiceIsReachableFromActiveSettingsHome() {
         val screen = read("src/main/kotlin/tribixbite/cleverkeys/ui/settings/SettingsScreen.kt")
-        assertWithMessage("the panel must actually be composed into the settings screen")
-            .that(Regex("""(?m)^\s*TestKeyboardSection\(\)""").containsMatchIn(screen)).isTrue()
-
-        assertWithMessage("the field must show and edit the persisted practice text")
-            .that(sectionSource).contains("value = testKeyboardText")
-        assertWithMessage("typing must write back to the persisted practice text")
-            .that(sectionSource).contains("onValueChange = { testKeyboardText = it }")
-        assertWithMessage("the Clear action must empty the field")
-            .that(
-                Regex("""onClick\s*=\s*\{\s*testKeyboardText\s*=\s*""\s*}""")
-                    .containsMatchIn(sectionSource)
-            ).isTrue()
-        // The point of the panel is to behave like a real text field, so the IME sees the
-        // same capitalization contract it would in a messaging app.
-        assertWithMessage("the practice field must request sentence capitalization")
-            .that(sectionSource).contains("capitalization = KeyboardCapitalization.Sentences")
-        assertWithMessage("the practice field must be multi-line so wrapping can be tried")
-            .that(Regex("""minLines\s*=\s*[3-9]""").containsMatchIn(sectionSource)).isTrue()
+        assertWithMessage("active settings must have a setup/practice destination and route")
+            .that(Regex("""SettingsDestination\(stringResource\(R.string.viipio_setup_and_try_title\),[\s\S]{0,240}?startActivity\(Intent\(this@SettingsScreen, LauncherActivity::class.java\)\)""")
+                .containsMatchIn(screen)).isTrue()
+        val practice = read("src/main/kotlin/tribixbite/cleverkeys/activities/LauncherActivity.kt")
+        assertWithMessage("setup/practice must render an editable field")
+            .that(practice).contains("OutlinedTextField(")
+        assertWithMessage("typed practice text must remain editable")
+            .that(practice).contains("value = testText, onValueChange = { testText = it }")
+        assertWithMessage("practice field must request sentence capitalization")
+            .that(practice).contains("keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)")
     }
 
     @Test

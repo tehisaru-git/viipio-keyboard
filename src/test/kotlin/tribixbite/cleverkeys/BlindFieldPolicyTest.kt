@@ -77,6 +77,11 @@ class BlindFieldPolicyTest {
         every { Log.e(any(), any<String>()) } returns 0
         every { Log.e(any(), any<String>(), any()) } returns 0
 
+        // A mockable-JVM SpannableString is null; keep the real editor text
+        // while testing the ordinary/blind field correction boundary.
+        mockkObject(SuggestionSpanCommit)
+        every { SuggestionSpanCommit.decorate(any(), any(), any()) } answers { firstArg<String>() }
+
         mockkObject(Config.Companion)
         config = mockk(relaxed = true)
         config.word_prediction_enabled = true

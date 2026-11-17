@@ -1,6 +1,7 @@
 package tribixbite.cleverkeys
 
 import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.os.Build
 import android.view.Gravity
 import android.view.View
@@ -19,7 +20,6 @@ import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
 import io.mockk.verify
 import org.junit.After
-import org.junit.Assert.assertThrows
 import org.junit.Before
 import org.junit.Test
 
@@ -43,17 +43,9 @@ import org.junit.Test
  * `VibratorCompatTest` already uses, hardened here with an assertion that the write actually
  * landed instead of silently leaving `SDK_INT` at android.jar's 0.
  *
- * ## The one thing this tier cannot reach
- *
- * [WindowLayoutUtils.configureEdgeToEdge] ends by clearing the window background with
- * `ColorDrawable(Color.TRANSPARENT)`, and **every** android.jar constructor body is
- * `throw new RuntimeException("Stub!")` — including `Drawable()`, which rules out shadowing
- * the class with a test double. So the call cannot return here. That is turned into evidence
- * rather than a gap: [edgeToEdge_clearsTheWindowBackgroundOnEveryApiLevel] asserts the throw
- * originates *inside* `ColorDrawable`'s constructor on every API level, which is exactly the
- * claim "the background clear is unconditional" (v1.0.7 nav-bar transparency). The
- * `decorView.setBackgroundColor` line that follows it is out of reach in pure JVM and is
- * covered on-device by `SoftInputWindowLayoutInstrumentedTest`.
+ * This project's `unitTests.returnDefaultValues` mockable Android jar does not throw from
+ * `ColorDrawable` construction. Run the entire edge-to-edge call and verify the explicit
+ * Window/decor calls; visual pixels and OEM insets still require on-device checks.
  */
 class WindowLayoutUtilsTest {
 
@@ -160,9 +152,9 @@ class WindowLayoutUtilsTest {
     /**
      * Every member of [WindowLayoutUtils] is `@JvmStatic`, so the object compiles to statics
      * only — `mockkObject` has no instance methods to intercept and the real body runs. Static
-     * mocking plus `callOriginal()` is the working shape: [WindowLayoutUtils.configureEdgeToEdge]
-     * is neutralised (it cannot return off-device) while every other member, including the
-     * self-calls the method under test makes, executes for real.
+     * mocking plus `callOriginal()` is the working shape: neutralise only
+     * [WindowLayoutUtils.configureEdgeToEdge] to test parent layout without coupling it
+     * to window/decor calls, while every other member executes for real.
      */
     private fun stubEdgeToEdgeOnly() {
         mockkStatic(WindowLayoutUtils::class)
@@ -185,7 +177,7 @@ class WindowLayoutUtilsTest {
     private class Probe(
         val window: Window,
         val attrs: WindowManager.LayoutParams,
-        val error: RuntimeException
+        val decor: View
     )
 
     private fun configureAt(sdkInt: Int): Probe {
@@ -193,11 +185,11 @@ class WindowLayoutUtilsTest {
         val attrs = mockk<WindowManager.LayoutParams>(relaxed = true)
         attrs.layoutInDisplayCutoutMode = CUTOUT_UNSET
         val window = mockk<Window>(relaxed = true)
+        val decor = mockk<View>(relaxed = true)
         every { window.attributes } returns attrs
-        val error = assertThrows(RuntimeException::class.java) {
-            WindowLayoutUtils.configureEdgeToEdge(window)
-        }
-        return Probe(window, attrs, error)
+        every { window.decorView } returns decor
+        WindowLayoutUtils.configureEdgeToEdge(window)
+        return Probe(window, attrs, decor)
     }
 
     @Test
@@ -300,15 +292,8 @@ class WindowLayoutUtilsTest {
         // pre-29 one that changes nothing else.
         for (sdk in listOf(24, Build.VERSION_CODES.Q, 34, 35)) {
             val probe = configureAt(sdk)
-            assertThat(probe.error).hasMessageThat().isEqualTo("Stub!")
-            // android.jar's stub bodies throw from the constructor itself (Drawable's, via
-            // ColorDrawable's super call), so these two frames ARE the
-            // `ColorDrawable(Color.TRANSPARENT)` allocation inside configureEdgeToEdge.
-            val frames = probe.error.stackTrace.map { it.className + "." + it.methodName }
-            assertThat(frames).contains("android.graphics.drawable.ColorDrawable.<init>")
-            assertThat(frames).contains(
-                "tribixbite.cleverkeys.WindowLayoutUtils.configureEdgeToEdge"
-            )
+            verify(exactly = 1) { probe.window.setBackgroundDrawable(any<ColorDrawable>()) }
+            verify(exactly = 1) { probe.decor.setBackgroundColor(Color.TRANSPARENT) }
         }
     }
 
@@ -317,9 +302,8 @@ class WindowLayoutUtilsTest {
     // =========================================================================
 
     /**
-     * Runs the real [WindowLayoutUtils.updateSoftInputWindowLayoutParams] with only
-     * [WindowLayoutUtils.configureEdgeToEdge] stubbed out (it cannot return in pure JVM — see
-     * the class doc).
+     * Runs the real [WindowLayoutUtils.updateSoftInputWindowLayoutParams] with its
+     * edge-to-edge call stubbed out to isolate the parent-layout contract.
      */
     private fun softInputProbe(isFullscreen: Boolean): Triple<Window, WindowManager.LayoutParams, FrameLayout.LayoutParams> {
         stubEdgeToEdgeOnly()

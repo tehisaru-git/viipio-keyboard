@@ -88,6 +88,10 @@ class LearningFunnelBookkeepingTest {
         every { Log.e(any(), any<String>()) } returns 0
         every { Log.e(any(), any<String>(), any()) } returns 0
 
+        // Preserve the real committed characters without mockable Android spans.
+        mockkObject(SuggestionSpanCommit)
+        every { SuggestionSpanCommit.decorate(any(), any(), any()) } answers { firstArg<String>() }
+
         // Config's prefs are @JvmField, so a relaxed mock stores real values here.
         mockkObject(Config.Companion)
         config = mockk(relaxed = true)

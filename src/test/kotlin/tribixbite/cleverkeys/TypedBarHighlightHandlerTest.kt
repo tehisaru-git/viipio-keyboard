@@ -60,6 +60,10 @@ class TypedBarHighlightHandlerTest {
         every { Log.e(any(), any<String>()) } returns 0
         every { Log.e(any(), any<String>(), any()) } returns 0
 
+        // This fixture tests word replacement, not Android's stub SpannableString.
+        mockkObject(SuggestionSpanCommit)
+        every { SuggestionSpanCommit.decorate(any(), any(), any()) } answers { firstArg<String>() }
+
         mockkObject(Config.Companion)
         config = mockk(relaxed = true)
         config.word_prediction_enabled = true

@@ -58,8 +58,9 @@ class DebugLoggingManagerTest {
     @Test
     fun `getLogFilePath returns correct path`() {
         val path = manager.getLogFilePath()
-        assertThat(path).contains("swipe_log.txt")
-        assertThat(path).startsWith("/data/")
+        // MockK's filesDir is intentionally a host-local temp directory; the
+        // contract is app-private context storage, not an Android-only prefix.
+        assertThat(path).isEqualTo(java.io.File(mockContext.filesDir, "swipe_log.txt").absolutePath)
     }
 
     // =========================================================================
