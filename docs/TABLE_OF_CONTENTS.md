@@ -17,7 +17,8 @@ Viipio is an experimental offline Android keyboard. Its name is language-neutral
 - [v0.5.0 release verification](releases/v0.5.0.md) — previous tested scope.
 - [Gboard research and prioritized Viipio backlog](plans/viipio-gboard-feature-backlog.md) — cited help pages, read-only emulator observations, acceptance gates and separately testable milestones.
 - [Earlier Gboard feature map](plans/viipio-gboard-parity.md) — historical version proposals and active-versus-inherited distinction; use the newer backlog for current priorities.
-- [Development quality gates](development/viipio-quality-gates.md) — measured bottlenecks, fast feedback, isolated Gradle checks and release criteria.
+- [Development quality gates and future autonomous workflow](development/viipio-quality-gates.md) — measured bottlenecks, fast feedback, guarded Gradle, release criteria and proposed bounded recurring work.
+- [ET/EN language-mode policy](specs/viipio-language-modes.md) — proposed English-only, Estonian + English and optional Estonian-only choices; **not shipped in v0.8.0**.
 - [Local input diagnostics](eval/local-swipe-diagnostics.md) — independently consented ET swipe, ET completed words and experimental ET/EN Viipio-owned input events added in v0.6.0, with exclusions, export and erasure.
 - [Estonian offline dictionary](specs/estonian-offline-dictionary.md) and [human-swipe research](eval/human-swipe-research.md) — lexicon provenance and outstanding accuracy evidence.
 
