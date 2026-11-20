@@ -557,6 +557,18 @@ class ViipioInputMethodServiceTest {
         assertFalse(source.contains("EmojiGridView"))
     }
 
+    @Test fun emojiBrowserDeleteIsBoundToTheCapturedEditorAndPane() {
+        val source = java.io.File("src/main/kotlin/tribixbite/cleverkeys/ViipioInputMethodService.kt").readText()
+        val callback = source.substringAfter("panel.onEditorDelete = {", "")
+            .substringBefore("panel.onEmojiPicked = { emoji ->")
+        assertTrue("Emoji pane must offer an editor-delete callback", callback.isNotBlank())
+        assertTrue(callback.contains("panel.visibility == View.VISIBLE"))
+        assertTrue(callback.contains("editor === field"))
+        assertTrue(callback.contains("currentInputConnection === connection"))
+        assertTrue(callback.contains("deleteBackward(connection)"))
+        assertTrue(source.contains("panel.onEditorDelete = null"))
+    }
+
     @Test fun inputViewAndCaretChangesInvalidatePendingDecode() {
         val source = java.io.File("src/main/kotlin/tribixbite/cleverkeys/ViipioInputMethodService.kt").readText()
         assertTrue(source.contains("override fun onFinishInputView("))
@@ -802,6 +814,68 @@ class ViipioInputMethodServiceTest {
         }
         assertFalse(ViipioInputMethodService.deleteBackward(connection))
         assertEquals(0, deletes)
+    }
+
+    @Test fun backspaceDeletesWholeVariationSelectorEmojiInsteadOfOrphaningSelector() {
+        val field = EditText(RuntimeEnvironment.getApplication())
+        field.setText("a♥️")
+        field.setSelection(field.length())
+        val connection = field.onCreateInputConnection(EditorInfo())
+        assertTrue(ViipioInputMethodService.deleteBackward(connection))
+        assertEquals("a", field.text.toString())
+    }
+
+    @Test fun backspaceDeletesJoinedModifierAndFlagEmojiWithoutTouchingEarlierText() {
+        for (emoji in listOf("👍🏽", "👩‍💻", "🇪🇪")) {
+            val field = EditText(RuntimeEnvironment.getApplication())
+            field.setText("a$emoji")
+            field.setSelection(field.length())
+            val connection = field.onCreateInputConnection(EditorInfo())
+            assertTrue("Deletion failed for $emoji", ViipioInputMethodService.deleteBackward(connection))
+            assertEquals("Earlier text must survive deletion of $emoji", "a", field.text.toString())
+        }
+    }
+
+    @Test fun truncatedGraphemeWindowDeclinesBlindPartialDeletion() {
+        val original = "a" + "b" + "\u0301".repeat(127)
+        val field = EditText(RuntimeEnvironment.getApplication())
+        field.setText(original)
+        field.setSelection(field.length())
+        val connection = field.onCreateInputConnection(EditorInfo())
+        assertFalse(ViipioInputMethodService.deleteBackward(connection))
+        assertEquals(original, field.text.toString())
+    }
+
+    @Test fun truncatedRegionalIndicatorRunNeverDeletesTwoWhenOnlyOneIsLast() {
+        val indicator = "🇦" // one regional-indicator code point, paired by grapheme rules
+        val field = EditText(RuntimeEnvironment.getApplication())
+        field.setText("a" + indicator.repeat(65))
+        field.setSelection(field.length())
+        val connection = field.onCreateInputConnection(EditorInfo())
+        val before = field.text.toString()
+        val deleted = ViipioInputMethodService.deleteBackward(connection)
+        assertTrue("A Backspace may delete one final indicator or safely decline", !deleted ||
+            field.text.toString() == "a" + indicator.repeat(64))
+        assertTrue("Never remove two regional indicators from a truncated run",
+            field.text.toString() == before || field.text.toString() == "a" + indicator.repeat(64))
+    }
+
+    @Test fun shortEditorReadbackDoesNotDeleteTwoFromAnOddRegionalIndicatorRun() {
+        val indicator = "🇦"
+        val field = EditText(RuntimeEnvironment.getApplication())
+        field.setText("a" + indicator.repeat(65))
+        field.setSelection(field.length())
+        val actual = field.onCreateInputConnection(EditorInfo())
+        val capped = object : InputConnectionWrapper(actual, false) {
+            override fun getTextBeforeCursor(n: Int, flags: Int): CharSequence? =
+                super.getTextBeforeCursor(minOf(n, 64), flags)
+        }
+        val before = field.text.toString()
+        val deleted = ViipioInputMethodService.deleteBackward(capped)
+        assertTrue("A short readback may delete only one final indicator or decline",
+            !deleted || field.text.toString() == "a" + indicator.repeat(64))
+        assertTrue("Never remove two indicators when the editor caps readback",
+            field.text.toString() == before || field.text.toString() == "a" + indicator.repeat(64))
     }
 
     @Test fun backspaceRemovesSelectedTextOrWholeUnicodeCodePoint() {

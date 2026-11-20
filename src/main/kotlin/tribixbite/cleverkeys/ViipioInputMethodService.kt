@@ -4,6 +4,7 @@ import android.graphics.PointF
 import android.graphics.drawable.GradientDrawable
 import android.content.Intent
 import android.inputmethodservice.InputMethodService
+import android.icu.text.BreakIterator
 import android.text.InputType
 import android.view.KeyEvent
 import android.view.Gravity
@@ -374,7 +375,7 @@ class ViipioInputMethodService : InputMethodService() {
         personalOfferButton = null
         clearSuggestions()
         toolbarCompact = false
-        emojiPanel?.let { it.onEmojiPicked = null; it.onClose = null }
+        emojiPanel?.let { it.onEmojiPicked = null; it.onEditorDelete = null; it.onClose = null }
         surface?.cancelActiveTouch()
         surface?.onGesture = null
         val view = KeyboardSurfaceView(this).also {
@@ -1200,6 +1201,7 @@ class ViipioInputMethodService : InputMethodService() {
         afterSwipeWord = null
         manualPolicy.reset()
         correctionTracker.clear()
+        panel.reloadRecents()
         panel.setSearchIndex(emojiSearch)
         panel.setSearchMode(false)
         panel.clearQuery()
@@ -1207,6 +1209,12 @@ class ViipioInputMethodService : InputMethodService() {
             if (emojiPanel === panel && panel.visibility == View.VISIBLE) resizeForEmoji(true, searching)
         }
         panel.onClose = ::closeEmojiPanel
+        panel.onEditorDelete = {
+            if (panel.visibility == View.VISIBLE && editor === field &&
+                currentInputConnection === connection && surface === anchor) {
+                runCatching { deleteBackward(connection) }
+            }
+        }
         panel.onEmojiPicked = { emoji ->
             val inserted = panel.visibility == View.VISIBLE && editor === field &&
                 currentInputConnection === connection && surface === anchor && connection.commitText(emoji, 1)
@@ -1223,6 +1231,7 @@ class ViipioInputMethodService : InputMethodService() {
             panel.setSearchMode(false)
             panel.clearQuery()
             panel.onEmojiPicked = null
+            panel.onEditorDelete = null
             panel.onClose = null
         }
         resizeForEmoji(false)
@@ -1314,7 +1323,17 @@ class ViipioInputMethodService : InputMethodService() {
             return down && up
         }
 
-        /** A selected range wins; otherwise delete one Unicode code point, not a UTF-16 half. */
+        private fun allRegionalIndicators(text: String): Boolean {
+            var offset = 0
+            while (offset < text.length) {
+                val point = text.codePointAt(offset)
+                if (point !in 0x1F1E6..0x1F1FF) return false
+                offset += Character.charCount(point)
+            }
+            return text.isNotEmpty()
+        }
+
+        /** A selected range wins; otherwise delete one grapheme, not half a visible emoji. */
         internal fun deleteBackward(connection: InputConnection): Boolean {
             val selected = connection.getSelectedText(0)
             if (!selected.isNullOrEmpty()) return connection.commitText("", 1)
@@ -1325,7 +1344,7 @@ class ViipioInputMethodService : InputMethodService() {
             // Repeating a code-point deletion on an empty Compose field can
             // throw inside the app's EditProcessor and terminate its process.
             // Never issue it without observing at least one preceding character.
-            val before = connection.getTextBeforeCursor(2, 0)
+            val before = connection.getTextBeforeCursor(128, 0)
             if (before == null) {
                 // Blind editors cannot prove that a code-point deletion is safe at
                 // offset zero. Route a normal DEL key instead; never send the
@@ -1335,6 +1354,34 @@ class ViipioInputMethodService : InputMethodService() {
                 return down && up
             }
             if (before.isEmpty()) return false
+            val text = before.toString()
+            val iterator = BreakIterator.getCharacterInstance(java.util.Locale.ROOT)
+            iterator.setText(text)
+            val start = iterator.preceding(text.length)
+            // An editor may return *fewer* units than requested while older text
+            // still exists. Prefer a known absolute caret; otherwise treat the
+            // left edge as unanchored and never infer RI parity or a long cluster.
+            val absoluteCaret = extracted?.takeIf {
+                it.startOffset >= 0 && it.selectionStart >= 0 &&
+                    it.selectionStart == it.selectionEnd
+            }?.let { it.startOffset.toLong() + it.selectionStart }
+            if (absoluteCaret != null && absoluteCaret < text.length) return false
+            val leftEdgeUnknown = absoluteCaret == null || absoluteCaret > text.length || text.length == 128
+            if (start == BreakIterator.DONE || start < 0 ||
+                (leftEdgeUnknown && (start == 0 ||
+                    Character.isLowSurrogate(text[0]) || allRegionalIndicators(text)))) return false
+            val suffix = text.substring(start)
+            if (suffix.codePointCount(0, suffix.length) > 1) {
+                // Recheck the bounded suffix before a multi-codepoint deletion. The editor
+                // can change while the keyboard is visible; never guess a larger range.
+                if (connection.getTextBeforeCursor(suffix.length, 0)?.toString() != suffix) return false
+                if (connection.deleteSurroundingText(suffix.length, 0)) return true
+                // Let the editor interpret a normal DEL if it refused a UTF-16 range;
+                // a one-codepoint fallback would strand a variation selector or ZWJ.
+                val down = connection.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DEL))
+                val up = connection.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DEL))
+                return down && up
+            }
             if (connection.deleteSurroundingTextInCodePoints(1, 0)) return true
             val down = connection.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DEL))
             val up = connection.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DEL))

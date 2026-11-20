@@ -18,9 +18,19 @@ import tribixbite.cleverkeys.R
 
 /** Inline emoji browser with virtualized, labeled rows. It never focuses an editor inside the IME. */
 class EmojiPanelView(context: Context) : LinearLayout(context) {
+    companion object {
+        private const val RECENTS_FILE = "emoji_browser_recents"
+        /** Deliberate erasure from Settings, not a text-field editing action. */
+        fun clearSavedRecents(context: Context): Boolean = runCatching {
+            context.getSharedPreferences(RECENTS_FILE, Context.MODE_PRIVATE)
+                .edit().remove("entries").commit()
+        }.getOrDefault(false)
+    }
     /** Return true only after the editor confirms commit; failed picks are not recent. */
     var onEmojiPicked: ((String) -> Boolean)? = null
     var onClose: (() -> Unit)? = null
+    /** Browse-only key: remove from the external editor, never the search query or recents. */
+    var onEditorDelete: (() -> Unit)? = null
     /** Host resizes panel/keyboard: browse 334dp, search 100dp, stable total envelope. */
     var onSearchModeChanged: ((Boolean) -> Unit)? = null
     var isSearchMode = false
@@ -32,9 +42,10 @@ class EmojiPanelView(context: Context) : LinearLayout(context) {
     internal val recentEmoji: List<String> get() = recent.toList()
     private var index: OfflineEmojiSearch? = null
     private val catalog = loadCatalog(context)
-    private val preferences = context.getSharedPreferences("emoji_browser_recents", Context.MODE_PRIVATE)
-    private val recent = preferences.getString("entries", "").orEmpty().split('\n')
-        .filter { it.isNotEmpty() && it.length <= 32 && '\r' !in it }.distinct().take(48).toMutableList()
+    private val preferences = context.getSharedPreferences(RECENTS_FILE, Context.MODE_PRIVATE)
+    private fun savedRecent(): List<String> = preferences.getString("entries", "").orEmpty().split('\n')
+        .filter { it.isNotEmpty() && it.length <= 32 && '\r' !in it }.distinct().take(48)
+    private val recent = savedRecent().toMutableList()
     private var category = 0
     private val list = ListView(context)
     private val categoryBar = HorizontalScrollView(context)
@@ -124,10 +135,13 @@ class EmojiPanelView(context: Context) : LinearLayout(context) {
         list.isVerticalScrollBarEnabled = false
         list.adapter = adapter
         addView(list, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
-        footer.addView(action("ABC", "Return to keyboard") { close() }, LayoutParams(dp(64), dp(38)))
-        footer.addView(action("⌕", "Search emoji") { setSearchMode(true) }, LayoutParams(dp(60), dp(38)))
-        footer.addView(action("Clear", "Clear recently used emoji") { clearRecent() }, LayoutParams(dp(74), dp(38)))
-        addView(footer, LayoutParams(LayoutParams.MATCH_PARENT, dp(38)))
+        footer.addView(action("ABC", "Return to keyboard") { close() }, LayoutParams(dp(64), dp(48)))
+        footer.addView(action("⌕", "Search emoji") { setSearchMode(true) }, LayoutParams(dp(60), dp(48)))
+        footer.addView(View(context), LayoutParams(0, dp(48), 1f))
+        footer.addView(action("⌫", context.getString(R.string.swipe_emoji_delete_editor)) {
+            onEditorDelete?.invoke()
+        }, LayoutParams(dp(58), dp(48)))
+        addView(footer, LayoutParams(LayoutParams.MATCH_PARENT, dp(48)))
         render()
     }
 
@@ -166,10 +180,16 @@ class EmojiPanelView(context: Context) : LinearLayout(context) {
     }
     fun clearQuery() { query = ""; render() }
     fun close() { setSearchMode(false); clearQuery(); onClose?.invoke() }
+    /** A Settings erasure may have happened while an older IME view was retained. */
+    fun reloadRecents() {
+        recent.clear()
+        recent.addAll(savedRecent())
+        if (category == 0 || isSearchMode) render()
+    }
     /** Only emoji choices, never surrounding editor text. */
     fun clearRecent() {
+        if (!clearSavedRecents(context)) return
         recent.clear()
-        preferences.edit().remove("entries").apply()
         if (category == 0) render()
     }
     internal fun pickForTest(emoji: String) {

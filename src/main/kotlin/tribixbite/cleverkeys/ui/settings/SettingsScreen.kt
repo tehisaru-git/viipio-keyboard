@@ -15,6 +15,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
@@ -42,12 +43,15 @@ import tribixbite.cleverkeys.ViipioHoldDurationPreference
 import tribixbite.cleverkeys.ViipioSentenceCapitalPreference
 import tribixbite.cleverkeys.ViipioPersonalWords
 import tribixbite.cleverkeys.estoniantelemetry.TelemetryActivity
+import tribixbite.cleverkeys.estonianemoji.EmojiPanelView
 import tribixbite.cleverkeys.ui.settings.io.importLanguagePack
 
 /** Single English-language home for the active IME; no inherited, inert CleverKeys controls. */
 @Composable
 internal fun SettingsActivity.SettingsScreen() {
     var page by rememberSaveable { mutableStateOf("home") }
+    var showClearEmojiConfirmation by remember { mutableStateOf(false) }
+    var clearEmojiFeedback by remember { mutableStateOf("") }
     BackHandler(page != "home") { page = "home" }
     val scrollState = rememberScrollState()
     val scope = rememberCoroutineScope()
@@ -212,6 +216,30 @@ internal fun SettingsActivity.SettingsScreen() {
                     title = stringResource(R.string.telemetry_title),
                     detail = diagnosticsDescription,
                     onClick = { startActivity(Intent(this@SettingsScreen, TelemetryActivity::class.java)) }
+                )
+                TextButton(onClick = { showClearEmojiConfirmation = true }) {
+                    Text(stringResource(R.string.viipio_clear_recent_emoji_title))
+                }
+                if (clearEmojiFeedback.isNotEmpty()) Text(clearEmojiFeedback,
+                    style = MaterialTheme.typography.bodySmall)
+                if (showClearEmojiConfirmation) AlertDialog(
+                    onDismissRequest = { showClearEmojiConfirmation = false },
+                    title = { Text(stringResource(R.string.viipio_clear_recent_emoji_title)) },
+                    text = { Text(stringResource(R.string.viipio_clear_recent_emoji_desc)) },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            val cleared = EmojiPanelView.clearSavedRecents(this@SettingsScreen)
+                            clearEmojiFeedback = getString(if (cleared)
+                                R.string.viipio_clear_recent_emoji_done else
+                                R.string.viipio_clear_recent_emoji_failed)
+                            showClearEmojiConfirmation = false
+                        }) { Text(stringResource(R.string.viipio_clear_recent_emoji_confirm)) }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showClearEmojiConfirmation = false }) {
+                            Text(stringResource(R.string.common_cancel))
+                        }
+                    }
                 )
                 Text(stringResource(R.string.swipe_preview_warning),
                     style = MaterialTheme.typography.bodySmall,

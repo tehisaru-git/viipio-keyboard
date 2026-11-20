@@ -6,7 +6,9 @@ Viipio is an experimental offline Android keyboard. Its name is language-neutral
 
 - [README](../README.md) — current install instructions, capabilities, limits and update compatibility.
 - [Viipio identity](branding/viipio.md) — name, artwork and branding guidance.
+- [v0.9.0 candidate verification](releases/v0.9.0.md) — emoji browse Backspace, separate privacy erasure and release gates; **not published yet**.
 - [v0.8.0 release verification](releases/v0.8.0.md) — edge glide, earlier-word suggestions, personal-word refresh, signed update and remaining limits.
+- [Gboard emoji-pane observation](research/gboard-emoji-observation.md) — bounded Android 15 emulator comparison for Browse, Backspace, Search and ABC→Send; not a claim about proprietary internals.
 - [ENC 2021 frequent word forms](research/eki-enc21-common-word-forms.md) — CC BY public reference list, not a shipping decoder ranking.
 - [v0.7.0 full-suite triage](development/v070-test-triage.md) — post-release regression classification and test progress (not a new published APK).
 - [v0.7.0 identity migration and verification](releases/v0.7.0.md) — neutral App ID, separate installation and remaining test gates.

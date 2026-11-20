@@ -32,6 +32,28 @@ class EmojiPanelViewTest {
         assertFalse(panel.containsEditableTextField())
     }
 
+    @Test fun browseFooterHasEditorBackspaceAndNoClearOrFakeSend() {
+        val panel = panel()
+        panel.onEmojiPicked = { true }
+        panel.pickForTest("😀")
+        val footer = panel.getChildAt(2) as LinearLayout
+        val controls = (0 until footer.childCount).mapNotNull { footer.getChildAt(it) as? TextView }
+        var editorDeletes = 0
+        panel.onEditorDelete = { editorDeletes++ }
+        assertTrue(controls.any { it.text.toString() == "ABC" })
+        val backspace = controls.singleOrNull { it.contentDescription == "Delete from text field" }
+        assertNotNull("Gboard's emoji browse footer deletes from the editor", backspace)
+        assertTrue("Backspace needs at least a 48dp touch target",
+            backspace!!.layoutParams.height >= (48 * panel.resources.displayMetrics.density).toInt())
+        assertTrue(backspace.performClick())
+        assertEquals(1, editorDeletes)
+        assertFalse("Clear must not occupy the emoji browse footer",
+            controls.any { it.text.toString() == "Clear" })
+        assertFalse("Gboard's emoji browse footer has no Send action",
+            controls.any { it.contentDescription == "Send" })
+        assertEquals(listOf("😀"), panel.recentEmoji)
+    }
+
     @Test fun switchingCategoriesShowsDifferentBrowsableEmoji() {
         val panel = panel()
         val faces = panel.visibleEmoji
@@ -84,6 +106,17 @@ class EmojiPanelViewTest {
         recreated.clearRecent()
         assertTrue(recreated.recentEmoji.isEmpty())
         assertEquals(listOf("Smileys and emotions"), recreated.browseSectionTitles())
+    }
+
+    @Test fun settingsErasureClearsSavedRecentsAndRefreshesAnExistingPanel() {
+        val panel = panel()
+        panel.onEmojiPicked = { true }
+        panel.pickForTest("😀")
+        assertEquals(listOf("😀"), panel.recentEmoji)
+        assertTrue(EmojiPanelView.clearSavedRecents(RuntimeEnvironment.getApplication()))
+        panel.reloadRecents()
+        assertTrue(panel.recentEmoji.isEmpty())
+        assertEquals(listOf("Smileys and emotions"), panel.browseSectionTitles())
     }
 
     @Test fun failedEditorCommitDoesNotPolluteRecents() {

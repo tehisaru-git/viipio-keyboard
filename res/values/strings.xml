@@ -137,6 +137,12 @@
     <string name="swipe_emoji_browse_search" translatable="false">Search emoji</string>
     <string name="swipe_emoji_search_hint" translatable="false">Search emoji · type below</string>
     <string name="swipe_emoji_backspace" translatable="false">Remove search letter</string>
+    <string name="swipe_emoji_delete_editor" translatable="false">Delete from text field</string>
+    <string name="viipio_clear_recent_emoji_title" translatable="false">Clear recently used emoji</string>
+    <string name="viipio_clear_recent_emoji_desc" translatable="false">Remove only Viipio’s local emoji history. Text in other apps and diagnostic data stay unchanged.</string>
+    <string name="viipio_clear_recent_emoji_confirm" translatable="false">Clear history</string>
+    <string name="viipio_clear_recent_emoji_done" translatable="false">Recently used emoji cleared</string>
+    <string name="viipio_clear_recent_emoji_failed" translatable="false">Could not clear recently used emoji</string>
     <string name="swipe_emoji_close" translatable="false">Close emoji search</string>
     <string name="pref_layout_e_system">System settings</string>
     <string name="pref_layout_e_custom">Custom layout</string>
