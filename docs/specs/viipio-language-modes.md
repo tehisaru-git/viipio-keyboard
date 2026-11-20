@@ -1,6 +1,6 @@
 # Viipio language modes — proposed product policy
 
-**Status: design decision for a future release, not implemented in v0.8.0.** The current APK includes ET and EN, starts its active keyboard in ET and allows a two-way toolbar switch. A language mode is a selection inside **one** `io.github.tehisaru.viipio` app, not a second APK, signer, package ID or F-Droid listing. This policy replaces the assumption that every user must see both keyboards; it does not remove either language from the product.
+**Status: design decision for a future release, not implemented in v0.8.0.** The current APK includes ET and EN, starts its active keyboard in ET and allows a two-way toolbar switch. A language mode is a selection inside the **one installed** `io.github.tehisaru.viipio` app, not another installed app or package ID. Later, distinct APK **distribution variants** may preinstall different languages while retaining that App ID and signer; they are alternative offline-ready installers, not simultaneously installed keyboards. The [staged language-distribution plan](../plans/viipio-language-distribution.md) defines this future path. This policy replaces the assumption that every user must see both keyboards; it does not remove either language from the product.
 
 ## User-facing choices
 
