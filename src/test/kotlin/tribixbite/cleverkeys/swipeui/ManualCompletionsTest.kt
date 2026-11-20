@@ -139,6 +139,53 @@ class ManualCompletionsTest {
         assertThat(field.text).isEqualTo("other ter")
     }
 
+    @Test fun olderTypoAtInteriorCaretOffersLocalCorrectionAndReplacesOnlyThatWord() {
+        val completions = ManualCompletions.fromEntries(et, en)
+        val field = Field("tere trre tere", 7)
+        val offered = completions.update(field.connection, info(), KeyboardLanguage.ESTONIAN)
+        assertThat(offered).contains("tere")
+        assertThat(field.text).isEqualTo("tere trre tere")
+        assertThat(completions.choose(field.connection, offered.indexOf("tere"))).isTrue()
+        assertThat(field.text).isEqualTo("tere tere tere")
+    }
+
+    @Test fun knownWordAtEarlierCaretStillOffersNearbyCorrectionInsteadOfOnlyItself() {
+        val completions = ManualCompletions.fromEntries(listOf("tore" to 0, "tere" to 1), en)
+        val field = Field("ok tore edasi", 7)
+        assertThat(completions.update(field.connection, info(), KeyboardLanguage.ESTONIAN))
+            .contains("tere")
+        assertThat(completions.choose(field.connection, 0)).isTrue()
+        assertThat(field.text).isEqualTo("ok tere edasi")
+    }
+
+    @Test fun olderTypoRequiresStableCaretAndExactEditorReadbackAtClick() {
+        val completions = ManualCompletions.fromEntries(et, en)
+        val field = Field("ok trre edasi", 5)
+        val offered = completions.update(field.connection, info(), KeyboardLanguage.ESTONIAN)
+        assertThat(offered).contains("tere")
+        field.text = "ok trre mujal"
+        assertThat(completions.choose(field.connection, offered.indexOf("tere"))).isFalse()
+        assertThat(field.text).isEqualTo("ok trre mujal")
+        assertThat(completions.choose(field.connection, 0)).isFalse()
+        field.text = "ok trre edasi"; field.caret = 5; field.selectionStart = 5
+        completions.update(field.connection, info(), KeyboardLanguage.ESTONIAN)
+        field.caret = 6; field.selectionStart = 6
+        assertThat(completions.choose(field.connection, 0)).isFalse()
+        assertThat(field.text).isEqualTo("ok trre edasi")
+    }
+
+    @Test fun realEditTextConnectionCorrectsAnEarlierWordFromItsMiddle() {
+        val field = EditText(RuntimeEnvironment.getApplication())
+        field.setText("tere trre homme")
+        field.setSelection(7)
+        val connection = field.onCreateInputConnection(info())
+        val completions = ManualCompletions.fromEntries(et, en)
+        val offered = completions.update(connection, info(), KeyboardLanguage.ESTONIAN)
+        assertThat(offered).contains("tere")
+        assertThat(completions.choose(connection, offered.indexOf("tere"))).isTrue()
+        assertThat(field.text.toString()).isEqualTo("tere tere homme")
+    }
+
     @Test fun secretNumericNoSuggestionsAndSelectedTextAreGated() {
         val completions = ManualCompletions.fromEntries(et, en)
         val field = Field("ter")

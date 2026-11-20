@@ -30,15 +30,33 @@ class SurfaceGestureController(
         val start = origin ?: return
         sample(x, y, timeMs)
         val end = samples.last().key
+        // A touch just above QWERTY may land on the number-row boundary. Keep a
+        // stationary number tap, but start a genuine letter-to-letter glide at its
+        // first letter; never send number-row coordinates to the decoder.
+        val numberBoundary = !geometry.symbolMode && geometry.numericLayout == null &&
+            start.kind == KeyKind.NUMBER && start.row == 0 &&
+            samples.first().y >= start.bounds.bottom -
+                maxOf(8f, (start.bounds.bottom - start.bounds.top) * 0.28f)
+        val letterPath = if (numberBoundary)
+            samples.dropWhile { it.key?.kind != KeyKind.LETTER }
+                .filter { it.key?.kind == KeyKind.LETTER } else samples
         val first = samples.first()
-        val minSwipeDistance = maxOf(12f, (start.bounds.right - start.bounds.left) * 0.55f)
+        val pathStart = letterPath.firstOrNull()
+        val minSwipeDistance = maxOf(12f,
+            (pathStart?.key?.bounds?.let { it.right - it.left } ?: start.bounds.right - start.bounds.left) * 0.55f)
         val movedFar = samples.any {
             val dx = it.x - first.x
             val dy = it.y - first.y
             dx * dx + dy * dy >= minSwipeDistance * minSwipeDistance
         }
-        val qualifiedSwipe = movedFar && !geometry.symbolMode && start.kind == KeyKind.LETTER &&
-            samples.any { it.key?.kind == KeyKind.LETTER && it.key != start }
+        val letterMovedFar = pathStart != null && letterPath.any {
+            val dx = it.x - pathStart.x
+            val dy = it.y - pathStart.y
+            dx * dx + dy * dy >= minSwipeDistance * minSwipeDistance
+        }
+        val qualifiedSwipe = !geometry.symbolMode &&
+            ((start.kind == KeyKind.LETTER && movedFar) || (numberBoundary && letterMovedFar)) &&
+            letterPath.any { it.key?.kind == KeyKind.LETTER && it.key != pathStart?.key }
         val heldAlternative = end == start && samples.all { it.key == start } &&
             timeMs - first.timeMs >= 450 &&
             geometry.language == KeyboardLanguage.ESTONIAN && !geometry.symbolMode &&
@@ -48,7 +66,7 @@ class SurfaceGestureController(
             kotlin.math.abs(first.y - y) < (start.bounds.bottom - start.bounds.top) * 1.5f
         val result = when {
             deleteWord -> SurfaceGesture.DeleteWord(geometry.language)
-            qualifiedSwipe -> SurfaceGesture.Swipe(samples.toList(), geometry.language)
+            qualifiedSwipe -> SurfaceGesture.Swipe(letterPath.toList(), geometry.language)
             heldAlternative -> SurfaceGesture.Hold(start, geometry.language)
             end == null -> null
             end == start || !movedFar -> SurfaceGesture.Tap(start, geometry.language, timeMs)

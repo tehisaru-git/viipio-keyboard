@@ -36,6 +36,25 @@ the attribution, licence notice and link, indicate changes). CleverKeys
 distributes these adapted lists under GPL-3.0-only, with the attribution below.
 
 ================================================================================
+Research reference — EKI ENC 2021 (NOT bundled in the APK)
+================================================================================
+docs/research/eki-enc21-common-word-forms.csv is a derived, top-1000 public
+Estonian word-form frequency reference. It is not the shipped ET swipe lexicon
+and does not change the runtime decoder ranking.
+
+  Indrek Hein (2022), Eesti keele ühendkorpuse 2021 lemmade ja sõnavormide
+  sagedusloendid, Eesti Keele Instituut.
+  DOI: 10.15155/3-00-0000-0000-0000-08D1FL
+  https://metashare.ut.ee/repository/browse/eesti-keele-uhendkorpuse-2021-lemmade-ja-sonavormide-sagedusloendid/4547c7bfa0d411eebb4773db10791bcf142faa2513f94e4fabe1a0f710c1e3fa/
+  Dataset licence as recorded there: CC BY (unrestricted use).
+
+The source is lemma-grouped, not globally word-form-ranked. The Viipio script
+scripts/build_eki_wordforms.py merges identical forms' counts, excludes
+capitalized/non-Estonian-alphabetic forms and keeps the 1000 largest totals.
+See docs/research/eki-enc21-common-word-forms.md for bias, filtering and
+non-shipping limits. This data attribution is separate from the GPLv3 code.
+
+================================================================================
 Word frequencies — wordfreq
 ================================================================================
   wordfreq — Robyn Speer et al.

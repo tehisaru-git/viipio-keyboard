@@ -97,6 +97,18 @@ class ViipioInputMethodService : InputMethodService() {
             inputLanguage(), inputSink)
     }
     private val personalWords by lazy { ViipioPersonalWords(this) }
+    private val personalWordRefresh by lazy {
+        PersonalWordRefresh(personalWords) {
+            val view = surface
+            val info = editor
+            // Persistence already succeeded. Refresh the changed CTC trie on its
+            // background slot ahead of the next gesture, never on the UI thread.
+            if (view != null && info != null) view.post {
+                if (surface === view && editor === info && view.width > 0 &&
+                    taps.language == view.geometry.language) prewarmSwipe(view)
+            }
+        }
+    }
     private var candidatesRow: LinearLayout? = null
     private var candidateScroller: HorizontalScrollView? = null
     private var candidateSeparators: List<View> = emptyList()
@@ -573,7 +585,7 @@ class ViipioInputMethodService : InputMethodService() {
                 val current = added ?: offer ?: return@setOnClickListener
                 val lang = if (current.language == KeyboardLanguage.ESTONIAN) "et" else "en"
                 if (added != null) {
-                    if (!personalWords.remove(lang, current.word)) {
+                    if (!personalWordRefresh.remove(lang, current.word)) {
                         Toast.makeText(this@ViipioInputMethodService,
                             R.string.viipio_inline_word_unavailable, Toast.LENGTH_SHORT).show()
                     }
@@ -589,7 +601,7 @@ class ViipioInputMethodService : InputMethodService() {
                             offer.connection.getTextBeforeCursor(offer.word.length + 1, 0)?.toString() ==
                                 "${offer.word} "
                     }.getOrDefault(false)) {
-                    if (personalWords.add(lang, offer.word) == ViipioPersonalWords.AddResult.ADDED) {
+                    if (personalWordRefresh.add(lang, offer.word) == ViipioPersonalWords.AddResult.ADDED) {
                         addedPersonalWord = offer
                     } else Toast.makeText(this@ViipioInputMethodService,
                         R.string.viipio_inline_word_unavailable, Toast.LENGTH_SHORT).show()

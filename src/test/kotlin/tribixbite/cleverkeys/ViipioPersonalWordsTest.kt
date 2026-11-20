@@ -101,6 +101,22 @@ class ViipioPersonalWordsTest {
         }
     }
 
+    @Test fun successfulPersonalMutationRefreshesDecoderOnlyAfterDurableWrite() {
+        val (prefs, words) = store("viipio-personal-refresh")
+        val observed = mutableListOf<String>()
+        val refresh = PersonalWordRefresh(words) { observed.add(prefs.getString("custom_words_et", "")!!) }
+        assertEquals(ViipioPersonalWords.AddResult.ADDED, refresh.add("et", "mhm"))
+        assertTrue(observed.single().contains("mhm"))
+        assertEquals(ViipioPersonalWords.AddResult.EXISTS, refresh.add("et", "mhm"))
+        assertEquals(ViipioPersonalWords.AddResult.INVALID, refresh.add("fr", "mhm"))
+        assertEquals(1, observed.size)
+        assertFalse(refresh.remove("et", "puudub"))
+        assertEquals(1, observed.size)
+        assertTrue(refresh.remove("et", "mhm"))
+        assertEquals("{}", observed.last())
+        assertEquals(2, observed.size)
+    }
+
     @Test fun mixedInvalidStoredValuesFailClosedInsteadOfHidingGoodSwipeWords() {
         val (prefs, words) = store("viipio-mixed-invalid")
         prefs.edit().putString("custom_words_et", "{\"tere\":12,\"mhm\":\"bad\"}").commit()

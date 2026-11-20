@@ -193,6 +193,83 @@ class KeyboardSurfaceTest {
         assertTrue(emitted.single() is SurfaceGesture.Swipe)
     }
 
+    @Test fun nearNumberRowBoundaryCanEnterLettersWithoutTypingDigit() {
+        val geometry = KeyboardGeometry(330, 250, KeyboardLanguage.ESTONIAN)
+        val emitted = mutableListOf<SurfaceGesture>()
+        val input = SurfaceGestureController(geometry, emitted::add)
+        val number = geometry.rows[0][0].bounds
+        val q = geometry.rows[1][0].bounds
+        val w = geometry.rows[1][1].bounds
+        val e = geometry.rows[1][2].bounds
+        input.down(number.centerX, number.bottom - 2f, 1)
+        input.move(q.centerX, q.centerY, 10)
+        input.move(w.centerX, w.centerY, 20)
+        input.up(e.centerX, e.centerY, 30)
+        val swipe = emitted.single() as SurfaceGesture.Swipe
+        assertEquals(listOf("q", "w", "e"), swipe.samples.mapNotNull { it.key?.label }.distinct())
+        assertTrue(swipe.samples.all { it.key?.kind == KeyKind.LETTER })
+        emitted.clear()
+        input.down(number.centerX, number.bottom - 2f, 31)
+        input.up(number.centerX, number.bottom - 2f, 32)
+        assertEquals(KeyKind.NUMBER, (emitted.single() as SurfaceGesture.Tap).key.kind)
+    }
+
+    @Test fun returningToNumberRowNeverFeedsDigitCoordinatesIntoLetterDecoder() {
+        val geometry = KeyboardGeometry(330, 250, KeyboardLanguage.ENGLISH)
+        val emitted = mutableListOf<SurfaceGesture>()
+        val input = SurfaceGestureController(geometry, emitted::add)
+        val number = geometry.rows[0][0].bounds
+        val q = geometry.rows[1][0].bounds
+        val w = geometry.rows[1][1].bounds
+        input.down(number.centerX, number.bottom - 2f, 1)
+        input.move(q.centerX, q.centerY, 10)
+        input.move(w.centerX, w.centerY, 20)
+        input.up(number.centerX, number.centerY, 30)
+        val swipe = emitted.single() as SurfaceGesture.Swipe
+        assertTrue(swipe.samples.all { it.key?.kind == KeyKind.LETTER })
+        assertEquals("w", swipe.samples.last().key?.label)
+    }
+
+    @Test fun upperNumberRowAndNumericFieldsNeverBecomeLetterSwipes() {
+        val geometry = KeyboardGeometry(330, 250, KeyboardLanguage.ENGLISH)
+        val emitted = mutableListOf<SurfaceGesture>()
+        val input = SurfaceGestureController(geometry, emitted::add)
+        val number = geometry.rows[0][0].bounds
+        val q = geometry.rows[1][0].bounds
+        val w = geometry.rows[1][1].bounds
+        input.down(number.centerX, number.centerY, 1)
+        input.move(q.centerX, q.centerY, 10)
+        input.up(w.centerX, w.centerY, 20)
+        assertTrue(emitted.none { it is SurfaceGesture.Swipe })
+        val numeric = KeyboardGeometry(330, 250, KeyboardLanguage.ENGLISH,
+            numericLayout = NumericLayout.INTEGER)
+        val numericEmitted = mutableListOf<SurfaceGesture>()
+        val numericInput = SurfaceGestureController(numeric, numericEmitted::add)
+        val start = numeric.rows[0][0].bounds
+        val end = numeric.rows[1][1].bounds
+        numericInput.down(start.centerX, start.bottom - 2f, 30)
+        numericInput.move(end.centerX, end.centerY, 40)
+        numericInput.up(end.centerX, end.centerY, 50)
+        assertTrue(numericEmitted.none { it is SurfaceGesture.Swipe })
+    }
+
+    @Test fun sideEdgesStillStartLetterGlidesWithoutChangingOutsideTouchRule() {
+        val geometry = KeyboardGeometry(330, 250, KeyboardLanguage.ESTONIAN)
+        val emitted = mutableListOf<SurfaceGesture>()
+        val input = SurfaceGestureController(geometry, emitted::add)
+        val firstRow = geometry.rows[1]
+        val left = firstRow.first().bounds
+        val right = firstRow.last().bounds
+        input.down(0f, left.centerY, 1)
+        input.move(firstRow[1].bounds.centerX, left.centerY, 10)
+        input.up(firstRow[2].bounds.centerX, left.centerY, 20)
+        assertTrue(emitted.removeAt(0) is SurfaceGesture.Swipe)
+        input.down(geometry.width - 1f, right.centerY, 30)
+        input.move(firstRow[firstRow.lastIndex - 1].bounds.centerX, right.centerY, 40)
+        input.up(firstRow[firstRow.lastIndex - 2].bounds.centerX, right.centerY, 50)
+        assertTrue(emitted.single() is SurfaceGesture.Swipe)
+    }
+
     @Test fun liftingOutsideSurfaceCancelsAndStartsMustHitKey() {
         val geometry = KeyboardGeometry(330, 250, KeyboardLanguage.ENGLISH)
         val emitted = mutableListOf<SurfaceGesture>()

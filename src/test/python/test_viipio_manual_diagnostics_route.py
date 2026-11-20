@@ -27,7 +27,10 @@ class ManualDiagnosticsRouteTest(unittest.TestCase):
     def test_active_service_offers_explicit_personal_word_not_passive_add(self):
         text = SOURCE.read_text(encoding='utf-8')
         self.assertTrue('manualCompletions?.contains(' in text, 'missing dictionary membership gate')
-        self.assertTrue('personalWords.add(lang, offer.word)' in text, 'missing explicit add click')
+        self.assertTrue('personalWordRefresh.add(lang, offer.word)' in text, 'missing explicit add click')
+        refresh = (ROOT / 'src/main/kotlin/tribixbite/cleverkeys/PersonalWordRefresh.kt').read_text(encoding='utf-8')
+        self.assertIn('val result = words.add(language, word)', refresh)
+        self.assertIn('if (result == ViipioPersonalWords.AddResult.ADDED) onChanged()', refresh)
         self.assertTrue('personalOfferRow' in text, 'missing inline row')
 
 
