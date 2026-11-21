@@ -576,6 +576,26 @@ class ViipioInputMethodServiceTest {
         assertTrue(source.contains("surface?.onGesture = null"))
     }
 
+    @Test fun recreatedInputViewDropsProvisionalCorrectionBeforeAnyNewKey() {
+        val source = java.io.File("src/main/kotlin/tribixbite/cleverkeys/ViipioInputMethodService.kt").readText()
+        val startup = source.substringAfter("override fun onCreateInputView(): View {")
+            .substringBefore("clearSuggestions()")
+        assertTrue("a recreated input view must not inherit the prior editor's pending choice",
+            startup.contains("pendingCorrection = null"))
+    }
+
+    @Test fun fieldExitNeverLearnsAProvisionalAlternate() {
+        val source = java.io.File("src/main/kotlin/tribixbite/cleverkeys/ViipioInputMethodService.kt").readText()
+        val finish = source.substringAfter("private fun finishTelemetryField() {")
+            .substringBefore("/** Hide the normal word bar")
+        assertFalse("switching to another field must not be a confirmed correction",
+            finish.contains("finalizePendingCorrection()"))
+        for (method in listOf("onStartInput(attribute:", "onFinishInput()", "onFinishInputView(finishingInput:")) {
+            val body = source.substringAfter("override fun $method").substringBefore("override fun ")
+            assertTrue("$method must forget a provisional correction", body.contains("pendingCorrection = null"))
+        }
+    }
+
     @Test fun glideDeleteOwnedUndoRestoresCaretEvidenceAfterClearingCandidates() {
         val source = java.io.File("src/main/kotlin/tribixbite/cleverkeys/ViipioInputMethodService.kt").readText()
         val branch = source.substringAfter("is SurfaceGesture.DeleteWord -> {")

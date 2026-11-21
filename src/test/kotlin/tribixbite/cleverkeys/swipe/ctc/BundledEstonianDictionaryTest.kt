@@ -11,23 +11,27 @@ import java.security.MessageDigest
 class BundledEstonianDictionaryTest {
     @After fun resetResolver() = CtcImportedPackSupport.installResolver(null)
 
-    @Test fun bundledBytesMatchPublishedPackAndContainEstonianForms() {
+    @Test fun bundledBytesRemoveOnlyExactSisAndContainEstonianForms() {
         val asset = File("src/main/assets/dictionaries/et_enhanced.bin")
         val bytes = asset.readBytes()
         val sha256 = MessageDigest.getInstance("SHA-256").digest(bytes)
             .joinToString("") { "%02x".format(it) }
         assertThat(sha256)
-            .isEqualTo("9b4e79ad7ebefb59d7a23b3d719fcc62d8d8b33afa5d2638461e8a7fdfe9abe2")
+            .isEqualTo("e5b6bc41df85a636d6892e51e2e0ef45a1a79990a0e0c9c326244b76b64d51a1")
         val entries = CkdtDictionaryReader.readEntries(bytes)
-        assertThat(entries.size).isEqualTo(95_000)
+        assertThat(entries.size).isEqualTo(94_999)
         assertThat(entries.map { it.word }).contains("tere")
+        assertThat(entries.map { it.word }).doesNotContain("sis")
+        assertThat(entries.map { it.word }).contains("siis")
     }
 
     @Test fun bundledAttributionAndManifestRetainPublishedMetadata() {
         val manifest = File("src/main/assets/estonian/manifest.json").readText()
         val notice = File("src/main/assets/estonian/NOTICE.txt").readText()
         assertThat(manifest).contains("\"code\": \"et\"")
-        assertThat(manifest).contains("\"wordCount\": 95000")
+        assertThat(manifest).contains("\"wordCount\": 94999")
+        assertThat(manifest).contains("\"dictionarySha256\": " +
+            "\"e5b6bc41df85a636d6892e51e2e0ef45a1a79990a0e0c9c326244b76b64d51a1\"")
         assertThat(manifest).contains("CC-BY-4.0")
         assertThat(notice).contains("Leipzig Corpora Collection")
         assertThat(notice).contains("CC BY 4.0")

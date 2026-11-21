@@ -1,6 +1,5 @@
 package tribixbite.cleverkeys.swipeui
 
-import android.text.InputType
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.ExtractedTextRequest
 import android.view.inputmethod.InputConnection
@@ -8,6 +7,8 @@ import tribixbite.cleverkeys.estonianui.KeyboardLanguage
 import tribixbite.cleverkeys.swipe.geometric.CkdtDictionaryReader
 import android.content.Context
 import tribixbite.cleverkeys.ViipioPersonalWords
+import tribixbite.cleverkeys.StaticContextLm
+import tribixbite.cleverkeys.ViipioRankingFieldPolicy
 import java.util.Locale
 
 /** Read-only, bounded lookup of the bundled tap dictionaries; no learning or autocorrect. */
@@ -32,7 +33,8 @@ internal class ManualCompletions private constructor(
         return indexes[language]?.contains(word) ?: true
     }
 
-    fun update(connection: InputConnection, info: EditorInfo, language: KeyboardLanguage): List<String> {
+    fun update(connection: InputConnection, info: EditorInfo, language: KeyboardLanguage,
+               contextModel: StaticContextLm? = null): List<String> {
         clear()
         if (!allowed(info)) return words
         val extracted = connection.getExtractedText(ExtractedTextRequest(), 0) ?: return words
@@ -75,12 +77,23 @@ internal class ManualCompletions private constructor(
             .filterNot { it.equals(word, ignoreCase = true) }
             .distinctBy { it.lowercase(Locale.ROOT) }.take(3)
         if (matches.isEmpty()) return words
+        // Context can change only the order of existing, user-actionable suggestions. The
+        // current prefix is not a previous word; a truncated left boundary is not evidence.
+        val code = if (language == KeyboardLanguage.ENGLISH) "en" else "et"
+        val previous = if (suffixLength == 0 && ViipioRankingFieldPolicy.allowed(info) &&
+            contextModel?.language == code) {
+            val priorText = before.substring(0, start)
+            val atStart = caret == before.length
+            tribixbite.cleverkeys.ViipioSwipeRanking.previousWord(
+                if (atStart) " $priorText" else priorText)
+        } else null
+        val rankedMatches = rankTyped(matches, previous, contextModel)
         words = when {
             word.length > 1 && word.all(Char::isUpperCase) ->
-                matches.map { it.uppercase(Locale.ROOT) }
+                rankedMatches.map { it.uppercase(Locale.ROOT) }
             word.first().isUpperCase() ->
-                matches.map { it.replaceFirstChar { letter -> letter.titlecase(Locale.ROOT) } }
-            else -> matches
+                rankedMatches.map { it.replaceFirstChar { letter -> letter.titlecase(Locale.ROOT) } }
+            else -> rankedMatches
         }
         offer = Offer(connection, caret, before, after, caret - (before.length - start),
             caret + suffixLength, word, words)
@@ -112,15 +125,9 @@ internal class ManualCompletions private constructor(
     }
 
     private fun allowed(info: EditorInfo): Boolean {
-        if (info.inputType and InputType.TYPE_MASK_CLASS != InputType.TYPE_CLASS_TEXT ||
-            info.inputType and InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS != 0 ||
-            info.imeOptions and EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING != 0) return false
-        return when (info.inputType and InputType.TYPE_MASK_VARIATION) {
-            InputType.TYPE_TEXT_VARIATION_PASSWORD, InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD,
-            InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD, InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS,
-            InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS, InputType.TYPE_TEXT_VARIATION_URI -> false
-            else -> true
-        }
+        // Explicitly exclude private/incognito fields *before* reading personal words.
+        if (!ViipioRankingFieldPolicy.allowed(info)) return false
+        return true
     }
 
     private class PrefixIndex(entries: List<Pair<String, Int>>) {
@@ -208,6 +215,16 @@ internal class ManualCompletions private constructor(
     }
 
     companion object {
+        /** Suggestions are not auto-committed; only listed language-matched evidence may reorder. */
+        internal fun rankTyped(candidates: List<String>, previous: String?,
+                               model: StaticContextLm?): List<String> {
+            if (candidates.size < 2 || previous == null || model == null) return candidates
+            val listed = candidates.map { model.listedProbability(previous, it).toDouble() }
+            val best = listed.indices.maxByOrNull { listed[it] } ?: return candidates
+            if (best == 0 || listed[best] < 0.02 || listed[best] <= listed[0] * 1.5) return candidates
+            return listOf(candidates[best]) + candidates.filterIndexed { i, _ -> i != best }
+        }
+
         fun fromEntries(et: List<Pair<String, Int>>, en: List<Pair<String, Int>>,
                         personalWords: (KeyboardLanguage) -> List<String> = { emptyList() }) =
             ManualCompletions(mapOf(KeyboardLanguage.ESTONIAN to PrefixIndex(et),

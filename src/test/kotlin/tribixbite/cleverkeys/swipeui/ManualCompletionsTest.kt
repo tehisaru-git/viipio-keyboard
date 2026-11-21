@@ -13,12 +13,79 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import tribixbite.cleverkeys.estonianui.KeyboardLanguage
+import tribixbite.cleverkeys.StaticContextLm
+import tribixbite.cleverkeys.StaticContextLmFixtures
 
 @RunWith(RobolectricTestRunner::class)
 class ManualCompletionsTest {
     private val et = listOf("tere", "terve", "tervitus", "tore").mapIndexed { i, w -> w to i }
     private val en = listOf("there", "the", "then").mapIndexed { i, w -> w to i }
-    private fun info(type: Int = InputType.TYPE_CLASS_TEXT) = EditorInfo().apply { inputType = type }
+    private fun info(type: Int = InputType.TYPE_CLASS_TEXT) = EditorInfo().apply {
+        inputType = type
+        packageName = "example.editor"
+    }
+
+    @Test fun privateEditorsNeverReadOrDisplayPersonalWords() {
+        val completions = ManualCompletions.fromEntries(et, en) { error("private word lookup") }
+        val field = Field("ter")
+        for (privateOptions in listOf("incognito=true", "private=true")) {
+            val secret = info().apply { privateImeOptions = privateOptions }
+            assertThat(completions.update(field.connection, secret, KeyboardLanguage.ESTONIAN))
+                .isEmpty()
+        }
+        assertThat(completions.update(field.connection, info().apply { packageName = "" },
+            KeyboardLanguage.ESTONIAN)).isEmpty()
+    }
+
+    @Test fun estonianStaticModelReordersSuggestionsButNeverTheTypedWord() {
+        val model = StaticContextLm.parse(StaticContextLmFixtures.encode(
+            unigrams = mapOf("ma" to 0.02, "tere" to 0.01, "tore" to 0.02),
+            table = mapOf("ma" to mapOf("tore" to 0.6)), language = "et"))
+        val completions = ManualCompletions.fromEntries(
+            listOf("tere" to 0, "tore" to 1), en)
+        val field = Field("ma t")
+        val ordinary = info().apply { packageName = "example.editor" }
+        assertThat(completions.update(field.connection, ordinary, KeyboardLanguage.ESTONIAN, model))
+            .containsExactly("tore", "tere").inOrder()
+        assertThat(field.text).isEqualTo("ma t")
+        assertThat(completions.update(field.connection, ordinary, KeyboardLanguage.ENGLISH, model))
+            .containsExactly("there", "the", "then").inOrder()
+        assertThat(field.text).isEqualTo("ma t")
+    }
+
+    @Test fun listedEnglishContextReordersOnlyExistingTypedSuggestionsWithoutChangingText() {
+        val model = StaticContextLm.parse(StaticContextLmFixtures.encode(
+            unigrams = mapOf("want" to 0.02, "too" to 0.01, "to" to 0.02),
+            table = mapOf("want" to mapOf("to" to 0.6))))
+        val completions = ManualCompletions.fromEntries(et,
+            listOf("too" to 0, "to" to 1, "today" to 2))
+        val field = Field("want t")
+        val ordinary = info().apply { packageName = "example.editor" }
+        assertThat(completions.update(field.connection, ordinary, KeyboardLanguage.ENGLISH, model))
+            .containsExactly("to", "too", "today").inOrder()
+        assertThat(field.text).isEqualTo("want t")
+        assertThat(completions.choose(field.connection, 0)).isTrue()
+        assertThat(field.text).isEqualTo("want to")
+    }
+
+    @Test fun typedContextIsInertInEstonianUnavailableModelAndPrivateFields() {
+        val model = StaticContextLm.parse(StaticContextLmFixtures.encode(
+            unigrams = mapOf("want" to 0.02, "too" to 0.01, "to" to 0.02),
+            table = mapOf("want" to mapOf("to" to 0.6))))
+        val completions = ManualCompletions.fromEntries(et, listOf("too" to 0, "to" to 1))
+        val field = Field("want t")
+        val ordinary = info().apply { packageName = "example.editor" }
+        assertThat(completions.update(field.connection, ordinary, KeyboardLanguage.ENGLISH))
+            .containsExactly("too", "to").inOrder()
+        assertThat(completions.update(field.connection, ordinary.apply {
+            privateImeOptions = "incognito=true"
+        }, KeyboardLanguage.ENGLISH, model)).isEmpty()
+        field.text = "older ter"; field.caret = field.text.length; field.selectionStart = field.caret
+        assertThat(completions.update(field.connection, info().apply {
+            packageName = "example.editor"
+        }, KeyboardLanguage.ESTONIAN, model))
+            .containsExactly("tere", "terve", "tervitus").inOrder()
+    }
 
     @Test fun manualPrefixUsesSelectedLanguageAndNeverCorrectsAutomatically() {
         val completions = ManualCompletions.fromEntries(et, en)

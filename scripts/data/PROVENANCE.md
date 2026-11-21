@@ -83,6 +83,21 @@ and must be re-evaluated (`StaticLmTapEvalTest`). The contributor list
 `scripts/data/tatoeba-contributors-en.txt` is regenerated from the same file and must be
 committed with the model.
 
+### Viipio Estonian model (`scripts/estonian/build_et_lm.py`)
+
+The ET model uses only pinned Leipzig news and attributed Tatoeba Estonian
+sentences, without a wordfreq(ET) artefact filter. Its `et.json` sidecar records
+both full archive hashes and the same-source heldout evaluation; the source text
+is not committed or packaged. It is active for **typed suggestions only**, not
+for automatic ET swipe top-1. `scripts/data/tatoeba-contributors-et.txt` and the
+app's root `NOTICE` credit the 78 counted Tatoeba authors. The rotating Tatoeba
+snapshot must match the recorded hash for a byte-identical rebuild.
+
+| Lang | Key | File | URL | License | Shipped? | Fetched | sha256 |
+|---|---|---|---|---|---|---|---|
+| et | leipzig | `est_news_2022_100K.tar.gz` | https://downloads.wortschatz-leipzig.de/corpora/est_news_2022_100K.tar.gz | CC BY (download terms, version unspecified) | counts only | 2026-11-21 | f07d968d0875b7dc55400b9850974e70a07c2372bbb924643d887944f7ac2096 |
+| et | tatoeba | `est_sentences_detailed.tsv.bz2` | https://downloads.tatoeba.org/exports/per_language/est/est_sentences_detailed.tsv.bz2 | CC BY 2.0 FR | counts only | 2026-11-21 | e09dfc5f9fd74b7b3385a81ec5cd0a0b6e5ec96aa5a979664b1a763971beeb08 |
+
 ### Other languages (2026-09-29, `--lang es|de|fr|it|pt|sv`)
 
 Each language is one `LangConfig` in `scripts/build_static_lm.py`; the pins below are copied from

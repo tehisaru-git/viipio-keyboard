@@ -3,9 +3,10 @@
   "name": "Estonian",
   "version": 1,
   "author": "tehisaru-git (experimental adaptation)",
-  "wordCount": 95000,
+  "wordCount": 94999,
   "hasPrefixBoost": false,
   "license": "CC-BY-4.0",
   "attribution": "Leipzig Corpora Collection (University of Leipzig), processed in HeliBoard aosp-dictionaries by Helium314; top 95000 selected/quantized by tehisaru-git. CC BY 4.0.",
-  "source": "https://codeberg.org/Helium314/aosp-dictionaries/src/branch/main/wordlists/main_et__experimental.combined"
+  "source": "https://codeberg.org/Helium314/aosp-dictionaries/src/branch/main/wordlists/main_et__experimental.combined",
+  "dictionarySha256": "e5b6bc41df85a636d6892e51e2e0ef45a1a79990a0e0c9c326244b76b64d51a1"
 }

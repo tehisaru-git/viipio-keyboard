@@ -21,6 +21,13 @@
     <string name="viipio_auto_space_after_swipe_title" translatable="false">Add space after a swipe when typing</string>
     <string name="viipio_double_space_period_title" translatable="false">Double-space inserts period</string>
     <string name="viipio_double_space_period_desc" translatable="false">Tap Space twice quickly after a word to insert a period followed by a space. Off keeps two spaces.</string>
+    <string name="viipio_correction_learning_title" translatable="false">Learn from my swipe corrections</string>
+    <string name="viipio_correction_learning_desc" translatable="false">Optional. Choose a swipe alternative and press Space immediately; repeat on a second occasion to prefer it for similarly scored swipes in this language. Only word-pair counts stay on this device; no editor context or swipe path is saved.</string>
+    <string name="viipio_clear_corrections_title" translatable="false">Forget swipe preferences</string>
+    <string name="viipio_clear_corrections_desc" translatable="false">Delete learned word-pair preferences from this device. Your personal dictionary and other data are unaffected.</string>
+    <string name="viipio_clear_corrections_confirm" translatable="false">Forget preferences</string>
+    <string name="viipio_clear_corrections_done" translatable="false">Swipe preferences forgotten</string>
+    <string name="viipio_correction_storage_failed" translatable="false">Could not save this change</string>
     <string name="viipio_typed_suggestions_title" translatable="false">Suggestions while typing</string>
     <string name="viipio_typed_suggestions_desc" translatable="false">Show matching words as you type; swipe alternatives remain available</string>
     <string name="viipio_backspace_word_undo_title" translatable="false">Undo a swiped word with Backspace</string>

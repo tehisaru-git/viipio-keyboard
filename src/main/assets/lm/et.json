@@ -1,0 +1,50 @@
+{
+  "format": "CKLM",
+  "version": 1,
+  "language": "et",
+  "vocab": 7712,
+  "prevs": 6646,
+  "pairs": 22916,
+  "bytes": 173629,
+  "sha256": "f560e7424f867818692a0a2f574ae4c1155e8b3a6983f25795c6109cb3006712",
+  "model": {
+    "lexicon": "et_enhanced.bin",
+    "contractionFiles": [],
+    "order": 2,
+    "minCount": 3,
+    "topK": 20
+  },
+  "corpus": {
+    "weights": {
+      "leipzig": 1.0,
+      "tatoeba": 1.0
+    }
+  },
+  "tatoebaContributors": 78,
+  "sources": [
+    {
+      "key": "leipzig",
+      "url": "https://downloads.wortschatz-leipzig.de/corpora/est_news_2022_100K.tar.gz",
+      "sha256": "f07d968d0875b7dc55400b9850974e70a07c2372bbb924643d887944f7ac2096",
+      "pinned": true,
+      "license": "CC BY (download terms; version unspecified)",
+      "shipped": true
+    },
+    {
+      "key": "tatoeba",
+      "url": "https://downloads.tatoeba.org/exports/per_language/est/est_sentences_detailed.tsv.bz2",
+      "sha256": "e09dfc5f9fd74b7b3385a81ec5cd0a0b6e5ec96aa5a979664b1a763971beeb08",
+      "pinned": true,
+      "license": "CC BY 2.0 FR",
+      "shipped": true
+    }
+  ],
+  "heldout": {
+    "eligible": 91211,
+    "allNextWords": 131268,
+    "contextCovered": 65829,
+    "modelTop3Hits": 14508,
+    "unigramTop3Hits": 10298
+  },
+  "attribution": "estonian/ET_CKLM_NOTICE.txt"
+}

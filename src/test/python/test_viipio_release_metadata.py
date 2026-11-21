@@ -11,7 +11,7 @@ README = (ROOT / "README.md").read_text()
 class ViipioReleaseMetadataTest(unittest.TestCase):
     def test_version_and_apk_name_are_branded(self):
         versions = dict(re.findall(r"ext\.(VERSION_MAJOR|VERSION_MINOR|VERSION_PATCH)\s*=\s*(\d+)", GRADLE))
-        self.assertEqual(versions, {"VERSION_MAJOR": "0", "VERSION_MINOR": "9", "VERSION_PATCH": "1"})
+        self.assertEqual(versions, {"VERSION_MAJOR": "0", "VERSION_MINOR": "10", "VERSION_PATCH": "0"})
         self.assertIn('ViipioKeyboard-v${variant.versionName}-${abi}.apk', GRADLE)
         self.assertIn('applicationId "io.github.tehisaru.viipio"', GRADLE)
 

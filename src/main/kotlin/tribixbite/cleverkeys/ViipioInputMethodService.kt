@@ -51,6 +51,7 @@ import tribixbite.cleverkeys.estoniantelemetry.TelemetryGeometry
 import tribixbite.cleverkeys.estoniantelemetry.TelemetryPolicy
 import android.os.SystemClock
 import java.util.UUID
+import java.util.Locale
 import tribixbite.cleverkeys.swipe.CtcEngineAdapter
 import tribixbite.cleverkeys.swipe.GeometricEngineAdapter
 import tribixbite.cleverkeys.a11y.KeyboardGeometry as AdapterGeometry
@@ -67,6 +68,8 @@ class ViipioInputMethodService : InputMethodService() {
     private var emojiPanel: EmojiPanelView? = null
     private var emojiSearch: OfflineEmojiSearch? = null
     private var emojiScope: CoroutineScope? = null
+    private var enContextModel: StaticContextLm? = null
+    private var etContextModel: StaticContextLm? = null
     private val suggestions = EstonianSuggestionController()
     private var manualCompletions: ManualCompletions? = null
     private var suggestionRow: FrameLayout? = null
@@ -134,6 +137,38 @@ class ViipioInputMethodService : InputMethodService() {
     private var undoAnchor: String? = null
     private val replacementText = StringBuilder()
     private val correctionTracker = SwipeCorrectionTracker()
+    private data class PendingCorrection(val from: String, val to: String, val language: String,
+        val info: EditorInfo, val connection: InputConnection,
+        val chosenCaret: Int, val consentEpoch: Long, val storeRevision: Long)
+    private var pendingCorrection: PendingCorrection? = null
+    private val correctionPreference by lazy { ViipioCorrectionPreference(this) }
+
+    /** Only the next successfully inserted Space can confirm this exact editor-owned choice. */
+    private fun preparePendingSpace(connection: InputConnection):
+        Pair<PendingCorrection, ViipioCorrectionConfirmation.Receipt>? {
+        val pending = pendingCorrection
+        pendingCorrection = null
+        if (pending == null || editor !== pending.info || connection !== pending.connection ||
+            inputLanguage() != pending.language || !ViipioRankingFieldPolicy.allowed(pending.info) ||
+            !ViipioCorrectionLearningPreference.enabled(this) ||
+            ViipioCorrectionLearningPreference.epoch(this) != pending.consentEpoch ||
+            correctionPreference.revision() != pending.storeRevision) return null
+        val receipt = ViipioCorrectionConfirmation.beforeSpace(connection, pending.to) ?: return null
+        if (receipt.caret != pending.chosenCaret) return null
+        return pending to receipt
+    }
+
+    private fun confirmPendingSpace(connection: InputConnection,
+        prepared: Pair<PendingCorrection, ViipioCorrectionConfirmation.Receipt>?) {
+        val (pending, receipt) = prepared ?: return
+        if (editor !== pending.info || currentInputConnection !== connection ||
+            inputLanguage() != pending.language || !ViipioRankingFieldPolicy.allowed(pending.info) ||
+            !ViipioCorrectionLearningPreference.enabled(this) ||
+            ViipioCorrectionLearningPreference.epoch(this) != pending.consentEpoch ||
+            correctionPreference.revision() != pending.storeRevision) return
+        if (ViipioCorrectionConfirmation.afterSpace(connection, receipt))
+            correctionPreference.record(pending.language, pending.from, pending.to)
+    }
 
     private fun clearSuggestions() {
         suggestions.clear()
@@ -211,7 +246,8 @@ class ViipioInputMethodService : InputMethodService() {
             info !== ownedEditor || suggestions.words.isNotEmpty() ||
             emojiPanel?.visibility == View.VISIBLE || afterSwipeWord != null) {
             manualCompletions?.clear()
-        } else manualCompletions?.update(connection, info, taps.language)
+        } else manualCompletions?.update(connection, info, taps.language,
+            if (taps.language == KeyboardLanguage.ESTONIAN) etContextModel else enContextModel)
         renderSuggestions()
     }
 
@@ -239,6 +275,8 @@ class ViipioInputMethodService : InputMethodService() {
     }
     private fun commitManualValue(value: String): Boolean {
         val connection = currentInputConnection ?: return false
+        val preparedSpace = if (value == " ") preparePendingSpace(connection)
+            else { pendingCorrection = null; null }
         val inputPrior = inputBefore()
         val info = editor
         val previous = loggedSwipe
@@ -268,6 +306,7 @@ class ViipioInputMethodService : InputMethodService() {
                 else -> { manualPolicy.reset(); connection.commitText(value, 1) }
             }
             if (!success) { typedWord.clear(); return false }
+            if (value == " ") confirmPendingSpace(connection, preparedSpace)
             // Only a literal, verified own-key append is admissible; shortcuts and replacements
             // cannot be reported as the requested key without proving the actual payload.
             if (inputPrior != null && !inputEvidence.changed(inputPrior, editor,
@@ -363,10 +402,35 @@ class ViipioInputMethodService : InputMethodService() {
                 // The keyboard remains usable without a dictionary.
             }
         }
+        scope.launch {
+            try {
+                enContextModel = withContext(Dispatchers.IO) {
+                    assets.open(StaticContextLm.assetNameFor("en")).use {
+                        StaticContextLm.parse(it.readBytes())
+                    }
+                }
+                refreshManualCompletions()
+            } catch (_: Exception) {
+                // Missing/unreadable corpus evidence must never interrupt ordinary typing.
+            }
+        }
+        scope.launch {
+            try {
+                etContextModel = withContext(Dispatchers.IO) {
+                    assets.open(StaticContextLm.assetNameFor("et")).use {
+                        StaticContextLm.parse(it.readBytes())
+                    }
+                }
+                refreshManualCompletions()
+            } catch (_: Exception) {
+                // Ordinary ET suggestions remain frequency-ranked if the model is unavailable.
+            }
+        }
     }
 
     override fun onCreateInputView(): View {
         epoch++
+        pendingCorrection = null // Recreated view has no ownership of the prior bar selection.
         typedWord.clear()
         personalOffer = null
         deferredPersonalOffer = null
@@ -431,11 +495,13 @@ class ViipioInputMethodService : InputMethodService() {
         val tools = listOf(
             Triple("☺︎", R.string.swipe_toolbar_emoji, { showEmojiPanel() }),
             Triple("?123", R.string.swipe_toolbar_symbols, {
+                pendingCorrection = null
                 typedWord.clear(); personalOffer = null; deferredPersonalOffer = null; addedPersonalWord = null
                 epoch++; clearSuggestions(); surface?.let { it.symbolMode = !it.symbolMode }
             }),
             Triple(if (taps.language == KeyboardLanguage.ESTONIAN) "ET" else "EN",
                 R.string.swipe_toolbar_language, {
+                    pendingCorrection = null
                     typedWord.clear(); personalOffer = null; deferredPersonalOffer = null; addedPersonalWord = null
                     epoch++; clearSuggestions(); taps.switchLanguage()
                     inputLanguageSwitched()
@@ -499,6 +565,7 @@ class ViipioInputMethodService : InputMethodService() {
                     val connection = currentInputConnection
                     val inputPrior = inputBefore(info, connection)
                     val replacedInput = suggestions.composingWord
+                    if (suggestions.words.isNotEmpty()) pendingCorrection = null
                     val manualCandidate = if (suggestions.words.isEmpty())
                         manualCompletions?.words?.getOrNull(index) else null
                     val manualTypedPrefix = typedWord.pending
@@ -529,6 +596,19 @@ class ViipioInputMethodService : InputMethodService() {
                             return@setOnClickListener
                         }
                         val newWord = suggestions.composingWord
+                        pendingCorrection = null
+                        if (index > 0 && replacedInput != null &&
+                            replacedInput == suggestions.words.firstOrNull() &&
+                            newWord != null && newWord != replacedInput && info != null &&
+                            ViipioRankingFieldPolicy.allowed(info) &&
+                            ViipioCorrectionLearningPreference.enabled(this@ViipioInputMethodService)) {
+                            val consentEpoch = ViipioCorrectionLearningPreference.epoch(this@ViipioInputMethodService)
+                            val revision = correctionPreference.revision()
+                            val receipt = ViipioCorrectionConfirmation.beforeSpace(connection, newWord)
+                            if (consentEpoch != null && revision != null && receipt != null)
+                                pendingCorrection = PendingCorrection(replacedInput, newWord,
+                                    inputLanguage(), info, connection, receipt.caret, consentEpoch, revision)
+                        }
                         if (replacedInput != null && newWord != null && replacedInput != newWord)
                             inputChanged(inputPrior, InputEventKind.CANDIDATE, newWord,
                                 InputEventSource.CANDIDATE, InputEventOutcome.REPLACED, replacedInput)
@@ -671,6 +751,7 @@ class ViipioInputMethodService : InputMethodService() {
         surface?.cancelActiveTouch()
         inputEvidence.reset()
         finishTelemetryField()
+        pendingCorrection = null
         epoch++
         typedWord.clear()
         personalOffer = null
@@ -695,6 +776,7 @@ class ViipioInputMethodService : InputMethodService() {
     override fun onFinishInput() {
         surface?.cancelActiveTouch()
         finishTelemetryField()
+        pendingCorrection = null
         typedWord.clear()
         personalOffer = null
         deferredPersonalOffer = null
@@ -768,6 +850,7 @@ class ViipioInputMethodService : InputMethodService() {
     override fun onFinishInputView(finishingInput: Boolean) {
         surface?.cancelActiveTouch()
         finishTelemetryField()
+        pendingCorrection = null
         typedWord.clear()
         personalOffer = null
         deferredPersonalOffer = null
@@ -821,6 +904,7 @@ class ViipioInputMethodService : InputMethodService() {
                 undo.info === editor, undo.connection === connection,
                 liveUndoSelection, undo.word.length)
             if (!sameComposingEnd && !ownTypedEnd && !ownOfferEnd && !ownUndoEnd) {
+                pendingCorrection = null
                 typedWord.clear()
                 personalOffer = null
                 deferredPersonalOffer = null
@@ -855,6 +939,8 @@ class ViipioInputMethodService : InputMethodService() {
         epoch++
         emojiScope?.cancel()
         emojiScope = null
+        enContextModel = null
+        etContextModel = null
         emojiSearch = null
         manualCompletions = null
         suggestions.end()
@@ -877,6 +963,7 @@ class ViipioInputMethodService : InputMethodService() {
     }
 
     private fun deleteOnePress() {
+        pendingCorrection = null
         val inputPrior = inputBefore()
         afterSwipeWord = null
         manualPolicy.reset()
@@ -948,6 +1035,7 @@ class ViipioInputMethodService : InputMethodService() {
                     KeyKind.ENTER -> panel.visibleEmoji.firstOrNull()?.let(panel::pickForTest)
                     KeyKind.EMOJI -> closeEmojiPanel()
                     KeyKind.LANGUAGE -> {
+                        pendingCorrection = null
                         taps.switchLanguage()
                         inputLanguageSwitched()
                         surface?.language = taps.language
@@ -963,6 +1051,8 @@ class ViipioInputMethodService : InputMethodService() {
         when (gesture) {
             is SurfaceGesture.Tap -> {
                 if (gesture.language != taps.language) return
+                if (gesture.key.kind == KeyKind.SHIFT || gesture.key.kind == KeyKind.LANGUAGE)
+                    pendingCorrection = null
                 epoch++ // A tap invalidates any in-flight decode, including the fallback.
                 if (gesture.key.kind == KeyKind.BACKSPACE) {
                     deleteOnePress()
@@ -970,6 +1060,7 @@ class ViipioInputMethodService : InputMethodService() {
                 }
                 if (gesture.key.kind != KeyKind.LETTER && gesture.key.kind != KeyKind.SPACE &&
                     gesture.key.kind != KeyKind.SHIFT) {
+                    pendingCorrection = null
                     typedWord.clear()
                     finalizeLoggedWord()
                     finishUndoneWord()
@@ -1024,6 +1115,7 @@ class ViipioInputMethodService : InputMethodService() {
                 refreshManualCompletions()
             }
             is SurfaceGesture.DeleteWord -> {
+                pendingCorrection = null
                 if (gesture.language != taps.language) return
                 typedWord.clear()
                 epoch++
@@ -1188,6 +1280,7 @@ class ViipioInputMethodService : InputMethodService() {
         val anchor = surface ?: return
         val panel = emojiPanel ?: return
         if (panel.visibility == View.VISIBLE) { closeEmojiPanel(); return }
+        pendingCorrection = null
         val connection = currentInputConnection ?: return
         val field = editor ?: return
         epoch++ // An older decode must not commit behind the emoji browser.
@@ -1252,9 +1345,26 @@ class ViipioInputMethodService : InputMethodService() {
         val info = editor ?: return
         if (!isSwipeAllowed(info) || info !== ownedEditor || connection !== ownedConnection) return
         if (undoneSwipe != null && replacementText.isNotEmpty()) finishUndoneWord()
+        pendingCorrection = null // A new swipe is not a confirmed next-word commit.
         finalizeLoggedWord()
         manualCompletions?.clear()
         val ticket = suggestions.begin()
+        val rankingContext = if (ticket != null && ViipioRankingFieldPolicy.allowed(info)) {
+            val extracted = runCatching {
+                connection.getExtractedText(ExtractedTextRequest(), 0)
+            }.getOrNull()
+            if (extracted == null || extracted.startOffset < 0 ||
+                extracted.selectionStart != extracted.selectionEnd ||
+                connection.getSelectedText(0)?.isNotEmpty() == true) null
+            else {
+                // A short readback's left edge is a word boundary only if the absolute caret
+                // proves it is the beginning of this editor, not a truncated suffix.
+                val atStart = extracted.startOffset.toLong() + extracted.selectionEnd ==
+                    ticket.beforeCursor.length.toLong()
+                ViipioSwipeRanking.previousWord(
+                    if (atStart) " " + ticket.beforeCursor else ticket.beforeCursor)
+            }
+        } else null
         val inputPrior = inputBefore(info, connection)
         renderSuggestions()
         if (ticket == null) return
@@ -1266,8 +1376,15 @@ class ViipioInputMethodService : InputMethodService() {
                 writingSuggestion = true
                 try {
                     val casedResult = taps.caseCandidates(result)
-                    SwipeStudyBridge.onSwipeDecoded(info, gesture.samples, geometry, casedResult.words)
-                    if (suggestions.accept(ticket, casedResult)) {
+                    val rankedResult = if (ViipioRankingFieldPolicy.allowed(info)) {
+                        val optedIn = ViipioCorrectionLearningPreference.enabled(this)
+                        val net = if (optedIn) correctionPreference.netFor(language,
+                            casedResult.words.firstOrNull().orEmpty()) else emptyMap()
+                        ViipioSwipeRanking.rank(casedResult, language, rankingContext, enContextModel,
+                            preferred = { _, to -> net[to.lowercase(Locale.ROOT)] ?: 0 })
+                    } else casedResult
+                    SwipeStudyBridge.onSwipeDecoded(info, gesture.samples, geometry, rankedResult.words)
+                    if (suggestions.accept(ticket, rankedResult)) {
                         taps.consumeSwipeShift()
                         view.shiftMode = taps.shiftMode
                         refreshSentenceCapitalization()
@@ -1282,7 +1399,7 @@ class ViipioInputMethodService : InputMethodService() {
                                     TelemetryRuntime.collectingInput, InputEventKind.SWIPE,
                                     " $committed", InputEventSource.SWIPE, emit = inputSink)
                             recordDecodedSwipe(info, connection, gesture, geometry,
-                                casedResult.words, casedResult.scores, committed, decoder)
+                                rankedResult.words, rankedResult.scores, committed, decoder)
                         }
                         renderSuggestions()
                     }

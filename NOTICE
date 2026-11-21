@@ -294,6 +294,17 @@ Leipzig Corpora Collection downloads (web and news text):
                             por-br_newscrawl_2011_300K (weight 0.5)
   Swedish     (lm/sv.cklm)  swe_news_2023_300K
 
+Viipio v0.10.0 additionally packages an Estonian candidate model
+(`lm/et.cklm`) derived from `est_news_2022_100K` (Leipzig download corpus)
+and a pinned Estonian Tatoeba sentence snapshot. It reorders only *typed*
+suggestions, not Estonian swipe auto-selection. Leipzig's download-specific
+terms describe CC BY without a version number; this ET source does not claim
+the CC BY 4.0 version listed above for the other corpus snapshots.
+© Universität Leipzig / Sächsische Akademie der Wissenschaften / InfAI.
+The snapshot hashes, generated `src/main/assets/lm/et.json` sidecar,
+build changes, separate ET attribution and measured next-word limits are
+documented in `docs/research/viipio-et-static-lm.md`.
+
 Only pruned, quantised word-pair statistics are distributed; no sentence text
 is shipped.
 
@@ -331,6 +342,22 @@ files generated with each model:
   scripts/data/tatoeba-contributors-fr.txt
   scripts/data/tatoeba-contributors-it.txt
   scripts/data/tatoeba-contributors-sv.txt
+
+Estonian Tatoeba contributors for `lm/et.cklm` (CC BY 2.0 FR; also in
+`src/main/assets/estonian/ET_CKLM_NOTICE.txt` and
+`scripts/data/tatoeba-contributors-et.txt`):
+
+  5nova, ABChessel, abiniz, Adelpa, Anastassia, Aqn, Arraroak, ArsWalrus,
+  astru, atitarev, Backwash102, Balamax, Batko, bcmoney, biber, boracasli2,
+  cuenta, dipdowel, enebi, epiphany, europeanlanguages, everylanguage,
+  GemMonkey, glossboss, gwete, HAGNi, hagthedon, Hayabusa, hubin,
+  ilovegreece, indoraq, Irks, janTuki, karatekrokodill, keegi, khokh,
+  King2E4, koala, kpjatnova, kr0428, lablanu, Lahna, Lewkis, Lily_at_School,
+  maari, Maasikas, madoromi, mayok, metsavend, mnoga, morel, mr5, mrtaistoi,
+  Nadii, ninefi, Nuella, olema, Orange, Paabel09, Pan_Guarde, pelmeen,
+  PrincessJin, rebane, Reesi, Ricardo14, Rovo, SadeceTurkce, sakslane,
+  snowyvoldemorts, Svalbard, sysko, Tlustulimu, twentyplus, uadamson,
+  VirtuOZ, Vortarulo, Wezel, Xonok
 
 ================================================================================
 Voice input — Moonshine (runtime port and optional voice pack)
@@ -427,14 +454,18 @@ this repository at the path above, which is the source of every APK.
 ================================================================================
 Bundled offline Estonian dictionary (et)
 ================================================================================
-src/main/assets/dictionaries/et_enhanced.bin is byte-identical to dictionary.bin
-in the published langpack-et.zip (SHA-256:
-9b4e79ad7ebefb59d7a23b3d719fcc62d8d8b33afa5d2638461e8a7fdfe9abe2).
+The historical `langpack-et.zip` contains the original 95,000-word dictionary
+(SHA-256: 9b4e79ad7ebefb59d7a23b3d719fcc62d8d8b33afa5d2638461e8a7fdfe9abe2).
+Viipio v0.10.0's bundled `src/main/assets/dictionaries/et_enhanced.bin`
+removes *only* the exact word `sis` from that pinned source: 94,999 words,
+SHA-256 e5b6bc41df85a636d6892e51e2e0ef45a1a79990a0e0c9c326244b76b64d51a1.
+All remaining words and rank bytes are unchanged, and the published ZIP is
+not overwritten. The reproducible transform is `scripts/estonian/remove_sis.py`.
 Its original manifest and attribution ship alongside it as
 src/main/assets/estonian/manifest.json and src/main/assets/estonian/NOTICE.txt.
 Source: Leipzig Corpora Collection (University of Leipzig), processed in
-HeliBoard aosp-dictionaries by Helium314; the top 95,000 forms were selected,
-filtered and frequency-quantized into CKDT V2 by tehisaru-git.
+HeliBoard aosp-dictionaries by Helium314; the original top 95,000 forms were
+selected, filtered and frequency-quantized into CKDT V2 by tehisaru-git.
 License for the adapted dictionary: Creative Commons Attribution 4.0 (CC BY 4.0).
 Source URL: https://codeberg.org/Helium314/aosp-dictionaries/src/branch/main/wordlists/main_et__experimental.combined
 No network access or ZIP import is required to use this bundled fallback.

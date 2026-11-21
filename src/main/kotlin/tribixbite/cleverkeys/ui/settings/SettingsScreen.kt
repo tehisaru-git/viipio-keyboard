@@ -42,6 +42,8 @@ import tribixbite.cleverkeys.ViipioBehaviorPreference
 import tribixbite.cleverkeys.ViipioHoldDurationPreference
 import tribixbite.cleverkeys.ViipioSentenceCapitalPreference
 import tribixbite.cleverkeys.ViipioPersonalWords
+import tribixbite.cleverkeys.ViipioCorrectionLearningPreference
+import tribixbite.cleverkeys.ViipioCorrectionPreference
 import tribixbite.cleverkeys.estoniantelemetry.TelemetryActivity
 import tribixbite.cleverkeys.estonianemoji.EmojiPanelView
 import tribixbite.cleverkeys.ui.settings.io.importLanguagePack
@@ -52,6 +54,9 @@ internal fun SettingsActivity.SettingsScreen() {
     var page by rememberSaveable { mutableStateOf("home") }
     var showClearEmojiConfirmation by remember { mutableStateOf(false) }
     var clearEmojiFeedback by remember { mutableStateOf("") }
+    var correctionLearning by remember { mutableStateOf(ViipioCorrectionLearningPreference.enabled(this)) }
+    var showClearCorrections by remember { mutableStateOf(false) }
+    var correctionFeedback by remember { mutableStateOf("") }
     BackHandler(page != "home") { page = "home" }
     val scrollState = rememberScrollState()
     val scope = rememberCoroutineScope()
@@ -164,6 +169,41 @@ internal fun SettingsActivity.SettingsScreen() {
                 )
             }
             "corrections" -> {
+                SettingsSwitch(
+                    title = stringResource(R.string.viipio_correction_learning_title),
+                    description = stringResource(R.string.viipio_correction_learning_desc),
+                    checked = correctionLearning,
+                    onCheckedChange = { requested ->
+                        if (ViipioCorrectionLearningPreference.setEnabled(this@SettingsScreen, requested)) {
+                            correctionLearning = requested
+                            correctionFeedback = ""
+                        } else correctionFeedback = getString(R.string.viipio_correction_storage_failed)
+                    }
+                )
+                TextButton(onClick = { showClearCorrections = true }) {
+                    Text(stringResource(R.string.viipio_clear_corrections_title))
+                }
+                if (correctionFeedback.isNotEmpty()) Text(correctionFeedback,
+                    style = MaterialTheme.typography.bodySmall)
+                if (showClearCorrections) AlertDialog(
+                    onDismissRequest = { showClearCorrections = false },
+                    title = { Text(stringResource(R.string.viipio_clear_corrections_title)) },
+                    text = { Text(stringResource(R.string.viipio_clear_corrections_desc)) },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            val cleared = ViipioCorrectionPreference(this@SettingsScreen).clear()
+                            correctionFeedback = getString(if (cleared)
+                                R.string.viipio_clear_corrections_done else
+                                R.string.viipio_correction_storage_failed)
+                            showClearCorrections = false
+                        }) { Text(stringResource(R.string.viipio_clear_corrections_confirm)) }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showClearCorrections = false }) {
+                            Text(stringResource(R.string.common_cancel))
+                        }
+                    }
+                )
                 SettingsSwitch(
                     title = stringResource(R.string.viipio_typed_suggestions_title),
                     description = stringResource(R.string.viipio_typed_suggestions_desc),
