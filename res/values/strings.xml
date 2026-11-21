@@ -134,6 +134,14 @@
     <string name="swipe_preview_warning" translatable="false">Experimental preview · Check important text before sending.</string>
     <string name="swipe_emoji_query_description" translatable="false">Emoji search query</string>
     <string name="swipe_emoji_item_description" translatable="false">Emoji %1$s</string>
+    <string name="swipe_emoji_tone_hold" translatable="false">Emoji %1$s, hold for skin tones</string>
+    <string name="swipe_emoji_tone_choice" translatable="false">Emoji %1$s, %2$s skin tone</string>
+    <string name="swipe_emoji_tone_neutral" translatable="false">neutral</string>
+    <string name="swipe_emoji_tone_light" translatable="false">light</string>
+    <string name="swipe_emoji_tone_medium_light" translatable="false">medium-light</string>
+    <string name="swipe_emoji_tone_medium" translatable="false">medium</string>
+    <string name="swipe_emoji_tone_medium_dark" translatable="false">medium-dark</string>
+    <string name="swipe_emoji_tone_dark" translatable="false">dark</string>
     <string name="swipe_emoji_browse_search" translatable="false">Search emoji</string>
     <string name="swipe_emoji_search_hint" translatable="false">Search emoji · type below</string>
     <string name="swipe_emoji_backspace" translatable="false">Remove search letter</string>

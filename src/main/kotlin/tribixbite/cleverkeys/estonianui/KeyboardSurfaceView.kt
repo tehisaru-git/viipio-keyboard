@@ -402,7 +402,10 @@ class KeyboardSurfaceView @JvmOverloads constructor(
     /** Geometry-only artwork: no copied vendor image assets or font-dependent glyphs. */
     private fun drawOriginalIcon(canvas: Canvas, key: SurfaceKey, density: Float) {
         val b = key.bounds
-        val scale = minOf(26f * density, (b.right - b.left) * .34f, (b.bottom - b.top) * .40f) / 24f
+        val iconWidth = if (key.kind == KeyKind.EMOJI)
+            minOf(42f * density, (b.right - b.left) * .68f, (b.bottom - b.top) * .62f)
+        else minOf(26f * density, (b.right - b.left) * .34f, (b.bottom - b.top) * .40f)
+        val scale = iconWidth / 24f
         canvas.save()
         canvas.translate(b.centerX - 12f * scale, b.centerY - 12f * scale)
         canvas.scale(scale, scale)

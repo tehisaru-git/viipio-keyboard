@@ -299,6 +299,27 @@ class KeyboardSurfaceViewTest {
     }
 
     @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+    @Test fun emojiIconIsReadableWithoutChangingItsTapOrAccessibilityBounds() {
+        val view = KeyboardSurfaceView(RuntimeEnvironment.getApplication())
+        view.layout(0, 0, 720, 600)
+        view.darkMode = false
+        val emoji = view.geometry.keys.single { it.kind == KeyKind.EMOJI }
+        val bounds = emoji.bounds
+        val bitmap = Bitmap.createBitmap(720, 600, Bitmap.Config.ARGB_8888)
+        view.draw(Canvas(bitmap))
+        assertNotEquals("Emoji outline should reach near a 16px radius on this viewport",
+            view.palette.letter, bitmap.getPixel(emoji.bounds.centerX.toInt() + 16,
+                emoji.bounds.centerY.toInt()))
+        assertEquals(bounds, view.geometry.keys.single { it.kind == KeyKind.EMOJI }.bounds)
+        assertEquals(emoji, view.geometry.hit(bounds.centerX, bounds.centerY))
+        val node = view.accessibilityNodeProvider.createAccessibilityNodeInfo(view.geometry.keys.indexOf(emoji))!!
+        val accessible = android.graphics.Rect()
+        node.getBoundsInParent(accessible)
+        assertEquals(bounds.left, accessible.left)
+        assertEquals(bounds.right, accessible.right)
+    }
+
+    @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
     @Test fun lightSurfacePaintsWhiteLettersMutedModifiersAndSaturatedEnter() {
         val view = KeyboardSurfaceView(RuntimeEnvironment.getApplication())
         view.layout(0, 0, 1080, 700)
