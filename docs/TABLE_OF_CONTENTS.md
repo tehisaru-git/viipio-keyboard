@@ -6,7 +6,8 @@ Viipio is an experimental offline Android keyboard. Its name is language-neutral
 
 - [README](../README.md) — current install instructions, capabilities, limits and update compatibility.
 - [Viipio identity](branding/viipio.md) — name, artwork and branding guidance.
-- [v0.9.1 local candidate](releases/v0.9.1.md) — continuous emoji categories, tone choices, kaomoji layout and larger key icon; not a public release.
+- [v0.9.1 local candidate](releases/v0.9.1.md) — continuous emoji categories, tone choices, kaomoji layout and larger key icon; publication status recorded there.
+- [v0.9.1 GitHub release body](releases/v0.9.1-github.md) — ARM64 update notes, checksum and validation limits.
 - [Gboard emoji scroll/tone observation](research/gboard-emoji-scroll-tone-observation.md) — bounded emulator behavior and icon proportions; no copied code or artwork.
 - [v0.9.0 release verification](releases/v0.9.0.md) — emoji browse Backspace, separate privacy erasure, signed update and remaining limits; public APK checked after release.
 - [v0.9.0 GitHub release body](releases/v0.9.0-github.md) — current ARM64 APK, checks and update path.
