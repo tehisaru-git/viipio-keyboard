@@ -6,11 +6,11 @@ Viipio is an experimental offline Android keyboard. Its name is language-neutral
 
 - [README](../README.md) — current install instructions, capabilities, limits and update compatibility.
 - [Viipio identity](branding/viipio.md) — name, artwork and branding guidance.
-- [v0.9.1 local candidate](releases/v0.9.1.md) — continuous emoji categories, tone choices, kaomoji layout and larger key icon; publication status recorded there.
-- [v0.9.1 GitHub release body](releases/v0.9.1-github.md) — ARM64 update notes, checksum and validation limits.
+- [v0.9.1 release verification](releases/v0.9.1.md) — continuous emoji categories, tone choices, kaomoji layout, signed update and physical-device limits.
+- [v0.9.1 GitHub release body](releases/v0.9.1-github.md) — current ARM64 APK, checksum and validation limits.
 - [Gboard emoji scroll/tone observation](research/gboard-emoji-scroll-tone-observation.md) — bounded emulator behavior and icon proportions; no copied code or artwork.
 - [v0.9.0 release verification](releases/v0.9.0.md) — emoji browse Backspace, separate privacy erasure, signed update and remaining limits; public APK checked after release.
-- [v0.9.0 GitHub release body](releases/v0.9.0-github.md) — current ARM64 APK, checks and update path.
+- [v0.9.0 GitHub release body](releases/v0.9.0-github.md) — previous ARM64 APK, checks and update path.
 - [v0.8.0 release verification](releases/v0.8.0.md) — edge glide, earlier-word suggestions, personal-word refresh, signed update and remaining limits.
 - [Gboard emoji-pane observation](research/gboard-emoji-observation.md) — bounded Android 15 emulator comparison for Browse, Backspace, Search and ABC→Send; not a claim about proprietary internals.
 - [ENC 2021 frequent word forms](research/eki-enc21-common-word-forms.md) — CC BY public reference list, not a shipping decoder ranking.
