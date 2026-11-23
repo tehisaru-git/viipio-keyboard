@@ -1,4 +1,4 @@
-# Viipio inline personal-word add (v0.10.1 candidate)
+# Viipio inline personal-word add (v0.10.1)
 
 ## Goal
 Let a person save an exact unknown ET/EN word with one deliberate tap **during Viipio-owned typing**, without an interrupting modal, automatic saving, or replacement of any existing candidate. Keep the v0.10.0 after-Space offer and Settings word list as fallbacks. This is Viipio's own original interaction, not a claim about Gboard internals.
