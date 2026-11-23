@@ -6,11 +6,12 @@ Viipio is an experimental offline Android keyboard. Its name is language-neutral
 
 - [README](../README.md) — current install instructions, capabilities, limits and update compatibility.
 - [Viipio identity](branding/viipio.md) — name, artwork and branding guidance.
-- [v0.10.2 key-preview candidate](releases/v0.10.2.md) and [key-preview specification](specs/viipio-key-preview.md) — enlarged key labels, default-on Preferences switch and bounded Gboard emulator observations; **not published yet**.
-- [v0.10.1 release verification](releases/v0.10.1.md) — published [normal latest release](https://github.com/tehisaru-git/viipio-keyboard/releases/tag/v0.10.1); inline ET/EN Add/Undo, one-time popup hint, full tests, signed editor/privacy checks and public byte-identical APK.
+- [v0.10.2 release verification](releases/v0.10.2.md) — published [normal latest release](https://github.com/tehisaru-git/viipio-keyboard/releases/tag/v0.10.2); default-on/off Key pop-up, signed ET/EN/symbol/password editor checks, full tests and public byte-identical APK.
+- [v0.10.2 GitHub notes](releases/v0.10.2-github.md), [key-preview specification](specs/viipio-key-preview.md) and [synthetic screenshot](screenshots/v0.10.2-key-popup.png) — bounded Gboard observations, implementation contract and visual evidence.
+- [v0.10.1 release verification](releases/v0.10.1.md) — historical [published release](https://github.com/tehisaru-git/viipio-keyboard/releases/tag/v0.10.1); inline ET/EN Add/Undo, one-time popup hint, full tests, signed editor/privacy checks and public byte-identical APK.
 - [v0.10.1 GitHub notes](releases/v0.10.1-github.md) and [inline word-add contract](specs/viipio-inline-personal-word.md) — shipped scope and documented limits.
 - [v0.10.0 release verification](releases/v0.10.0.md) — ET exact-word exclusion, guarded EN swipe context, ET/EN typed context, opt-in local corrections, full JVM and signed emulator gates, plus public byte-identical APK readback.
-- [v0.10.0 GitHub release notes](releases/v0.10.0-github.md) — published [normal latest release](https://github.com/tehisaru-git/viipio-keyboard/releases/tag/v0.10.0) with one signed ARM64 APK.
+- [v0.10.0 GitHub release notes](releases/v0.10.0-github.md) — historical [published release](https://github.com/tehisaru-git/viipio-keyboard/releases/tag/v0.10.0) with one signed ARM64 APK.
 - [ET static model provenance and heldout test](research/viipio-et-static-lm.md) — pinned Leipzig/Tatoeba source, attribution, reproducibility and limitation.
 - [v0.10.0 ranking protocol](eval/viipio-v010-ranking-design.md) — data limits, privacy policy and planned before/after evaluation.
 - [v0.9.1 release verification](releases/v0.9.1.md) — continuous emoji categories, tone choices, kaomoji layout, signed update and physical-device limits.
