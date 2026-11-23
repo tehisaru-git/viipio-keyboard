@@ -13,7 +13,7 @@ body:
     attributes:
       label: Viipio version
       description: Which Viipio release or build are you using?
-      placeholder: "e.g., v0.6.0"
+      placeholder: "Version shown in Obtainium or GitHub Releases"
     validations:
       required: true
 

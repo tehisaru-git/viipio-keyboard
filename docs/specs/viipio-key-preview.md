@@ -1,10 +1,10 @@
 # Viipio: key-press preview (v0.10.2)
 
-**Priority:** P1 · **Status:** In progress · **Target:** v0.10.2
+**Priority:** P1 · **Status:** Shipped · **Release:** v0.10.2
 
 ## Purpose and reference
 
-The Android emulator's installed Gboard 18.6.3, in an ordinary English text editor with Preferences → Key tap → Key pop-up ON, showed a large, light circular `s`/`a` indicator near the touched key during two short taps and committed exactly `sa`. Follow-up taps in its symbol page showed the same transient enlargement for `2` and `@` (editor `2@2@`). Four ordinary `s`/`a` taps in a disposable password editor also showed magnified letters. The existing Viipio v0.10.1 had no matching short-tap indicator; its held-choice popup is a separate action. This is a bounded *behavioral* reference; do not copy Gboard source, assets or claim its internals. Evidence: ignored `build/tooling/gboard-keypreview-observation/` (`gboard-single-taps.mp4`, frame-004/006/009, `viipio-single-taps.mp4`) and `build/tooling/v0102-key-preview/` (`gboard-number-symbol-taps.mp4`, `gboard-password-taps.mp4`). The official Gboard help describes access to Preferences, not the indicator's shape: https://support.google.com/gboard/answer/6102154?co=GENIE.Platform%3DAndroid&hl=en.
+In a controlled emulator text editor, Gboard 18.6.3 with Preferences → Key tap → Key pop-up ON showed a large, light circular `s`/`a` indicator during two short taps and committed exactly `sa`. Its symbol page showed the same transient enlargement for `2` and `@` (editor `2@2@`); a synthetic password editor also showed magnified letters. These are bounded behavioral observations, not claims about other versions. Evidence: ignored local `build/tooling/gboard-keypreview-observation/` (`gboard-single-taps.mp4`, frame-004/006/009) and `build/tooling/v0102-key-preview/` (`gboard-number-symbol-taps.mp4`, `gboard-password-taps.mp4`). The official Gboard help describes access to Preferences, not the indicator's shape: https://support.google.com/gboard/answer/6102154?co=GENIE.Platform%3DAndroid&hl=en.
 
 ## Requirements
 

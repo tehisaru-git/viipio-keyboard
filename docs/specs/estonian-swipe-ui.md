@@ -1,12 +1,11 @@
 # Viipio keyboard: independent keyboard surface
 
-The project was previously called Estonian Swipe. This document preserves the earlier UI design decisions, including the original package-ID continuity requirement for v0.1.0–v0.6.0. **Superseded for v0.7.0:** the owner explicitly requested a language-neutral Android App ID, `io.github.tehisaru.viipio`. This is a separate app that cannot update `io.github.tehisaru.estonianswipe` in place or inherit its private data. The original developer release signing identity remains attached only to historical v0.6.0 and earlier releases; v0.7.0 uses a new Viipio-named release certificate. Language-specific ET layout and diagnostics contracts remain valid.
+This is an earlier UI design record. For the active keyboard and package ID, use the [current README](../../README.md) and [identity guide](../branding/viipio.md); some historical requirements below have been superseded. The ET layout and diagnostics contracts remain relevant.
 
 ## Product boundary
 
-Build a clean, independently drawn Android keyboard that follows the familiar
-Estonian Gboard **layout and interaction pattern**, without copying Google's
-code, artwork, font, model, or branding. Keep the settings UI in English.
+Build a clean Android keyboard with a familiar Estonian **layout and interaction pattern**.
+Keep the settings UI in English.
 Offer Estonian and English as separate selected input languages. Support
 fully offline emoji search in both languages. No microphone, GIF search or
 network access is required for the first version.
@@ -32,14 +31,14 @@ but must not render the shipped keyboard or handle its input.
   multi-choice popup selects an accent, releasing inserts exactly one choice,
   and a deliberate swipe must cancel the hold. The pictured `m` offers `?`,
   `g` offers `ğ`, `&`, `ǵ`, and Estonian `s`/`z` retain `š`/`ž` alongside
-  `#`/`*`. Use original drawn geometry, not Gboard artwork. Keep three long
+  `#`/`*`. Keep three long
   candidate words in the same fixed-height row: adapt type size, never wrap
   onto the number row, ellipsize only if needed, and expose the full text to
   accessibility while preserving all three tap targets.
 - Dark reference supplied by the user: a flat near-charcoal keyboard surface,
   slate rounded number/letter keys, slightly lighter Shift/Backspace/punctuation,
-  high-contrast off-white labels, and one pale-blue Enter key. Use an original
-  palette and vector glyphs rather than extracting/copying Gboard assets.
+  high-contrast off-white labels, and one pale-blue Enter key. Use a consistent
+  palette and vector glyphs.
   The screenshot's Discord conversation, message composer, status/navigation bars,
   GIF button and microphone do **not** belong to the required keyboard UI.
   Keep a compact suggestion/emoji/language access area instead of recreating

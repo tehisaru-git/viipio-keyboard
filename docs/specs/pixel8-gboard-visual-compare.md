@@ -1,6 +1,6 @@
 # Pixel 8 light-keyboard comparison (user-supplied screenshots)
 
-Reference images (1080×2400): first/third show Gboard in the Discord composer, second shows Estonian Swipe v0.2.0 in the same app. These are visual/behavioral measurements, **not** permission to copy Google's code, fonts, icons, bitmaps, or models. The app's own message composer and navigation controls are not part of the keyboard.
+Reference images (1080×2400): first/third show Gboard in the Discord composer, second shows Estonian Swipe v0.2.0 in the same app. These are bounded visual and behavioral measurements from the specified setup. The app's own message composer and navigation controls are not part of the keyboard.
 
 | Observed surface | Gboard reference | Estonian Swipe v0.2.0 |
 |---|---|---|

@@ -89,7 +89,7 @@ class ViipioBrandingTest(unittest.TestCase):
         self.assertIn('Viipio version', pr)
         self.assertNotIn('CleverKeys Version', pr)
         self.assertIn('Viipio keyboard', bug)
-        self.assertIn('e.g., v0.6.0', bug)
+        self.assertIn('Version shown in Obtainium or GitHub Releases', bug)
 
 if __name__ == '__main__':
     unittest.main()

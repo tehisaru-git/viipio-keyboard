@@ -1,10 +1,10 @@
 # Viipio keyboard · identity and UI guide
 
-**Displayed name:** `Viipio keyboard` (preserve this capitalization in the launcher, Android IME picker and setup). **Repository:** `tehisaru-git/viipio-keyboard`. **Current Android package ID:** `io.github.tehisaru.viipio` starting in v0.7.0. Releases through v0.6.0 use the historical `io.github.tehisaru.estonianswipe` ID. Obtainium displays the current package under **App ID**; changing that ID makes v0.7.0 a separate Android app, not an in-place update. No settings, personal words, IME selection or app-private diagnostics migrate automatically. The old APK and records remain available under their historical release tags. The name is user-selected; preliminary brand searches are not legal clearance.
+**Displayed name:** `Viipio keyboard` (preserve this capitalization in the launcher, Android IME picker and setup). **Repository:** `tehisaru-git/viipio-keyboard`. **Android package ID:** `io.github.tehisaru.viipio`. Keep the package ID and release-signing certificate stable across updates so Android can install new versions in place.
 
 ## Mark
 
-The original symbol has three light rounded keycaps and one continuous pale-mint gesture with a terminal dot. It conveys a keyboard and a movement without using a letterform, mascot, Gboard glyph or borrowed asset. The gesture follows a shallow V path, not a copied swipe trail. Use the vector `res/drawable/ic_launcher_foreground.xml` on Android 26+ with `ic_launcher_background.xml`, its single-colour `ic_launcher_monochrome.xml` on themed launchers, and the generated PNGs for legacy densities. `scripts/generate_viipio_icon.py` is the reproducible PNG source. Review the actual 48 px and 192 px rasterizations whenever geometry changes. Do not put words inside the icon: small labels become illegible.
+The symbol has three light rounded keycaps and one continuous pale-mint gesture with a terminal dot. Use the vector `res/drawable/ic_launcher_foreground.xml` on Android 26+ with `ic_launcher_background.xml`, its single-colour `ic_launcher_monochrome.xml` on themed launchers, and the generated PNGs for legacy densities. `scripts/generate_viipio_icon.py` is the reproducible PNG source. Review the actual 48 px and 192 px rasterizations whenever geometry changes. Avoid words inside the icon: small labels become illegible.
 
 ## Visual tokens
 
@@ -15,8 +15,8 @@ The original symbol has three light rounded keycaps and one continuous pale-mint
 
 ## Copy and attribution
 
-Use short English labels for user-facing setup and controls; Estonian and English are *input languages*, not separate launcher locales. Mention the former Estonian Swipe name only in migration notes and historical release records. Keep GPLv3/CleverKeys attribution in `NOTICE` and source documentation. Never imply Gboard endorsement or copy its icons, code, models or word lists.
+Use short English labels for user-facing setup and controls; Estonian and English are *input languages*, not separate launcher locales. Keep GPL-3.0 and upstream/third-party attribution in `LICENSE` and `NOTICE`.
 
 ## Release checks
 
-Check both Android application and IME picker labels, all five density-specific legacy PNGs, adaptive/themed icon, the launcher at system light/dark settings, GitHub source link, new Obtainium App ID, package ID, versionCode and the **new Viipio-named release signature**. Preserve the older release certificate only for historical v0.6.0 and prior APKs; separately back up the new private key so future Viipio App ID releases can update each other. Test that old and new packages can coexist and that the **new** IME can be selected; do not call this an update or assume app-private data migrated. A source screenshot alone does not verify the installed icon or editor behavior. Human touch and accessibility on the Pixel 8 remain separate checks.
+Check both Android application and IME picker labels, all five density-specific legacy PNGs, adaptive/themed icon, the launcher in system light/dark modes, GitHub source link, package ID, versionCode and release-signing certificate. Back up the private key securely off-host so future releases can update the installed app. Check the signed APK on a real device before making claims about touch feel or accessibility; a source screenshot alone does not verify installed behavior.

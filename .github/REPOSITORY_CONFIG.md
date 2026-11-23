@@ -4,13 +4,13 @@ This is suggested public-facing copy and a checklist, **not** a claim that GitHu
 
 ## About
 
-**Description:** Viipio keyboard — experimental offline Android swipe keyboard (GPL-3.0)
+**Description:** Experimental offline Android keyboard for Estonian and English
 
-**Website:** https://github.com/tehisaru-git/viipio-keyboard
+**Website:** https://github.com/tehisaru-git/viipio-keyboard/releases/latest
 
-**Suggested topics:** `android-keyboard`, `offline`, `open-source`, `swipe-typing`. State ET/EN in the current-capabilities section, not the product tags.
+**Topics:** `android-keyboard`, `offline`, `open-source`, `swipe-typing`.
 
-Viipio is a language-neutral product name; ET and EN describe the **current preview**, not an all-languages or French release. Starting with v0.7.0 the Android App ID is `io.github.tehisaru.viipio`; the historical `io.github.tehisaru.estonianswipe` package remains in older releases and cannot update in place to the new app. The GPL-3.0 source snapshot derives from [CleverKeys](https://github.com/tribixbite/CleverKeys); see [NOTICE](../NOTICE) and the [archived upstream README](../UPSTREAM_README.md). Do not present inherited CleverKeys modules or documentation as active Viipio features.
+The active Android package ID is `io.github.tehisaru.viipio`. Viipio currently supports ET/EN input; do not present inherited modules or plans as shipped capabilities. Keep [GPL-3.0](../LICENSE), [NOTICE](../NOTICE) and third-party attribution available.
 
 ## Social preview (optional)
 
@@ -20,5 +20,5 @@ Use Viipio's own artwork and an experimental/offline keyboard description. If la
 
 - Enable issues if the [bug and feature templates](ISSUE_TEMPLATE/) are to be used; confirm their labels exist before relying on automatic labeling.
 - Review vulnerability reporting, dependency alerts, branch rules and workflow permissions for the actual repository. Grant Actions only the permissions each workflow needs; do not assume inherited upstream CI or release workflows are active.
-- Link only published, verified release APKs and checksums. See the [README](../README.md) for current experimental status, signing/update caveats and the release link.
+- Link downloads through the [latest release](https://github.com/tehisaru-git/viipio-keyboard/releases/latest); put version-specific APK hashes and test results in release notes rather than the homepage.
 - Keep GPL-3.0 licensing, upstream attribution and the archived upstream README visible. Do not replace the inherited project's history with Viipio claims.

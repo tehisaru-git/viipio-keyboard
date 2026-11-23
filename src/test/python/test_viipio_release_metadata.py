@@ -29,18 +29,20 @@ class ViipioReleaseMetadataTest(unittest.TestCase):
                         'build must copy the tracked CKDT dictionary')
         self.assertTrue('en_enhanced.bin' in GRADLE, 'English asset must be packaged')
 
-    def test_public_links_and_previous_name_migration_are_documented(self):
+    def test_homepage_stays_evergreen_and_puts_obtainium_first(self):
+        self.assertIn("## Install with Obtainium", README)
+        self.assertIn("## Features", README)
+        self.assertLess(README.index("## Install with Obtainium"), README.index("## Features"))
         self.assertIn("https://github.com/tehisaru-git/viipio-keyboard", README)
-        self.assertIn("v0.7.0 is an experimental public test release", README)
-        self.assertNotIn("APK is not available", README)
-        self.assertIn("ViipioKeyboard-v0.5.1-arm64-v8a.apk", README)
-        self.assertIn("releases/tag/v0.5.1", README)
-        self.assertIn("releases/tag/v0.6.0", README)
-        self.assertIn("releases/tag/v0.7.0", README)
-        self.assertIn("new Android app, not an in-place update", README)
-        self.assertNotIn("local, unpublished candidate", README)
-        self.assertIn("previously called **Estonian Swipe**", README)
+        self.assertIn("https://github.com/tehisaru-git/viipio-keyboard/releases/latest", README)
         self.assertIn("io.github.tehisaru.viipio", README)
+        self.assertIn("arm64-v8a", README)
+        self.assertIn("[GPL-3.0 license](LICENSE)", README)
+        self.assertIn("[Credits and third-party notices](NOTICE)", README)
+        self.assertNotRegex(README, r"\bv\d+\.\d+\.\d+\b")
+        for obsolete in ("previously called", "Estonian Swipe", "No Gboard code",
+                         "Pixel 8", "old package", "new Android app, not an in-place update"):
+            self.assertNotIn(obsolete, README)
 
 
     def test_operational_install_scripts_target_new_app(self):
