@@ -18,6 +18,28 @@ class PersonalWordsRouteTest(unittest.TestCase):
         self.assertIn('ViipioPersonalWords(', MANUAL)
         self.assertTrue('ViipioPersonalWords(context).json(lang)' in CTC)
         self.assertTrue('ViipioPersonalWords(context).json(lang)' in GEO)
+    def test_inline_add_help_is_reachable_after_first_use(self):
+        from xml.etree import ElementTree
+        section = SCREEN.split('private fun SettingsActivity.PersonalWordsControls()', 1)[1]
+        self.assertIn('stringResource(R.string.viipio_inline_word_help)', section)
+        strings = ElementTree.parse(ROOT / 'res/values/strings.xml').getroot()
+        help_text = next((node.text or '' for node in strings.findall('string')
+                          if node.attrib.get('name') == 'viipio_inline_word_help'), '')
+        self.assertIn('+', help_text)
+        self.assertIn('Undo', help_text)
+    def test_disabling_typed_suggestions_keeps_verified_after_space_add(self):
+        text = (ROOT / 'src/main/kotlin/tribixbite/cleverkeys/ViipioInputMethodService.kt').read_text()
+        refresh = text.split('private fun refreshManualCompletions() {', 1)[1].split(
+            'private fun ownSelectionAfterWrite(', 1)[0]
+        self.assertIn('val savedCompleted = personalOffer?.takeIf', refresh)
+        disabled_branch = refresh.split('} else {', 1)[0]
+        self.assertIn('personalOffer = savedCompleted', disabled_branch,
+                      'turning off typing suggestions must not erase the after-Space Add fallback')
+    def test_long_inline_label_can_wrap_without_ellipsizing_target_or_language(self):
+        text = (ROOT / 'src/main/kotlin/tribixbite/cleverkeys/ViipioInputMethodService.kt').read_text()
+        self.assertIn('maxLines = 3', text)
+        self.assertIn('ellipsize = null', text)
+        self.assertIn('viipio_inline_word_compact_add', text)
 
 
 if __name__ == '__main__':

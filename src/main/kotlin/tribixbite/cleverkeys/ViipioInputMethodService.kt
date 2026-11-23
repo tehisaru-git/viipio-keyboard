@@ -14,6 +14,7 @@ import android.widget.Toast
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.HorizontalScrollView
+import android.widget.PopupWindow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -76,12 +77,15 @@ class ViipioInputMethodService : InputMethodService() {
     private var toolbarRow: LinearLayout? = null
     private var personalOfferRow: LinearLayout? = null
     private var personalOfferButton: TextView? = null
-    private data class PersonalOffer(val word: String, val language: KeyboardLanguage,
-                                     val info: EditorInfo, val connection: InputConnection,
-                                     val caret: Int)
-    private var personalOffer: PersonalOffer? = null
-    private var deferredPersonalOffer: PersonalOffer? = null
-    private var addedPersonalWord: PersonalOffer? = null
+    private var inlineAddButton: TextView? = null
+    private var inlineHintPopup: PopupWindow? = null
+    private var inlineHintAnchor: View? = null
+    private var inlineHintView: TextView? = null
+    private var inlineHintDismiss: Runnable? = null
+    private var inlineHintAttempted = false
+    private var personalOffer: ViipioInlinePersonalOffer? = null
+    private var deferredPersonalOffer: ViipioInlinePersonalOffer? = null
+    private var addedPersonalWord: ViipioInlinePersonalOffer? = null
     private val typedWord = ViipioTypedWordCapture()
     private val inputEvidence = ViipioInputEvidence()
     private val inputSink: (tribixbite.cleverkeys.estoniantelemetry.ViipioInputEvent, EditorInfo) -> Unit =
@@ -96,6 +100,7 @@ class ViipioInputMethodService : InputMethodService() {
             TelemetryRuntime.collectingInput, kind, text, source, outcome, replaced, inputSink)
     }
     private fun inputLanguageSwitched() {
+        clearInlineHint()
         if (editor !== ownedEditor || currentInputConnection !== ownedConnection) return
         inputEvidence.language(editor, currentInputConnection, TelemetryRuntime.collectingInput,
             inputLanguage(), inputSink)
@@ -180,6 +185,10 @@ class ViipioInputMethodService : InputMethodService() {
     }
 
     private fun renderSuggestions() {
+        // A new own-key tap clears its offer briefly; keep the generic hint until its timer.
+        if (inlineHintView != null && (!TelemetryPolicy.editor(editor) ||
+            emojiPanel?.visibility == View.VISIBLE || surface?.symbolMode == true ||
+            surface?.numericLayout != null)) clearInlineHint()
         val words = suggestions.words.ifEmpty { manualCompletions?.words.orEmpty() }
         if (words != lastRenderedCandidateWords) {
             candidateScroller?.scrollTo(0, 0)
@@ -193,7 +202,27 @@ class ViipioInputMethodService : InputMethodService() {
         }
         val showCandidates = words.isNotEmpty() && !forceToolbar
         val offer = personalOffer ?: addedPersonalWord
-        val showPersonal = offer != null && !showCandidates
+        val showPersonal = offer != null && !showCandidates && !forceToolbar
+        inlineAddButton?.apply {
+            visibility = if (showCandidates && offer != null) View.VISIBLE else View.GONE
+            if (showCandidates && offer != null) {
+                text = if (addedPersonalWord != null)
+                    getString(R.string.viipio_inline_word_added, offer.word)
+                else getString(R.string.viipio_inline_word_compact_add, offer.word,
+                    if (offer.language == KeyboardLanguage.ESTONIAN) "ET" else "EN")
+                contentDescription = if (addedPersonalWord != null)
+                    getString(R.string.viipio_inline_word_added, offer.word)
+                else getString(R.string.viipio_inline_word_add, offer.word,
+                    getString(if (offer.language == KeyboardLanguage.ESTONIAN)
+                        R.string.viipio_language_estonian else R.string.viipio_language_english))
+                val minWidth = (48 * resources.displayMetrics.density).toInt()
+                val maxWidth = (resources.displayMetrics.widthPixels * 0.68f).toInt().coerceAtLeast(minWidth)
+                val wanted = (paint.measureText(text.toString()) + 20 * resources.displayMetrics.density)
+                    .toInt().coerceIn(minWidth, maxWidth)
+                val params = layoutParams as LinearLayout.LayoutParams
+                if (params.width != wanted) { params.width = wanted; layoutParams = params }
+            }
+        }
         personalOfferRow?.visibility = if (showPersonal) View.VISIBLE else View.GONE
         if (showPersonal && offer != null) {
             personalOfferButton?.text = if (addedPersonalWord != null)
@@ -207,23 +236,113 @@ class ViipioInputMethodService : InputMethodService() {
         toolbarRow?.visibility = if (showCandidates || showPersonal) View.GONE else View.VISIBLE
     }
 
+    /** Both the compact + beside candidates and the full-width row use one verified action. */
+    private fun handleInlinePersonalWordAction() {
+        val added = addedPersonalWord
+        val offer = personalOffer
+        val current = added ?: offer ?: return
+        val info = editor
+        val connection = currentInputConnection
+        if (!current.stillOwned(info, connection, taps.language, typedWord.pending)) {
+            personalOffer = null
+            addedPersonalWord = null
+            renderSuggestions()
+            return
+        }
+        val language = if (current.language == KeyboardLanguage.ESTONIAN) "et" else "en"
+        if (added != null) {
+            if (!personalWordRefresh.remove(language, added.word)) {
+                Toast.makeText(this, R.string.viipio_inline_word_unavailable, Toast.LENGTH_SHORT).show()
+                return // Keep Undo available after a failed durable removal.
+            }
+            addedPersonalWord = null
+            personalOffer = added.takeIf { manualCompletions?.contains(it.word, it.language) == false }
+        } else if (offer != null) {
+            // Exact dictionary membership is checked again at tap time, not just at display time.
+            if (manualCompletions?.contains(offer.word, offer.language) != false) {
+                personalOffer = null
+            } else if (personalWordRefresh.add(language, offer.word) == ViipioPersonalWords.AddResult.ADDED) {
+                addedPersonalWord = offer
+                personalOffer = null
+            } else {
+                Toast.makeText(this, R.string.viipio_inline_word_unavailable, Toast.LENGTH_SHORT).show()
+                return // Retry is possible; never claim an unwritten word was saved.
+            }
+        }
+        renderSuggestions()
+    }
+
+    private fun clearInlineHint() {
+        inlineHintDismiss?.let { inlineHintAnchor?.removeCallbacks(it) }
+        inlineHintDismiss = null
+        inlineHintAnchor = null
+        inlineHintView = null
+        runCatching { inlineHintPopup?.dismiss() }
+        inlineHintPopup = null
+    }
+
+    private fun maybeShowInlineWordHint(offer: ViipioInlinePersonalOffer?) {
+        if (offer == null || (!offer.completed && offer.word.length < 3) || inlineHintAttempted ||
+            (inlineAddButton == null && personalOfferRow == null)) return
+        val anchor = suggestionRow?.takeIf { it.isAttachedToWindow && it.width > 0 } ?: return
+        val guidance = ViipioInlineWordGuidance.from(this) ?: return
+        val dp = resources.displayMetrics.density
+        val inset = (8 * dp).toInt()
+        val popupWidth = (anchor.width - 2 * inset).coerceAtLeast((48 * dp).toInt())
+        val hint = TextView(this).apply {
+            tag = "viipio-inline-first-hint"
+            text = getString(R.string.viipio_inline_word_first_hint)
+            contentDescription = text
+            textSize = 12f
+            maxLines = 3
+            gravity = Gravity.CENTER_VERTICAL
+            setTextColor(surface?.palette?.label ?: android.graphics.Color.BLACK)
+            setPadding((12 * dp).toInt(), (6 * dp).toInt(),
+                (12 * dp).toInt(), (6 * dp).toInt())
+            minHeight = (40 * dp).toInt()
+            background = GradientDrawable().apply {
+                setColor(surface?.palette?.letter ?: android.graphics.Color.LTGRAY)
+                cornerRadius = 12 * dp
+            }
+        }
+        hint.measure(View.MeasureSpec.makeMeasureSpec(popupWidth, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))
+        val anchorLocation = IntArray(2)
+        anchor.getLocationOnScreen(anchorLocation)
+        if (anchorLocation[1] < hint.measuredHeight + inset) return
+        val popup = PopupWindow(hint, popupWidth, ViewGroup.LayoutParams.WRAP_CONTENT, false).apply {
+            isFocusable = false
+            isTouchable = false
+            isOutsideTouchable = false
+            elevation = 8 * dp
+        }
+        // The IME's own token positions this non-touchable help above its fixed-height bar.
+        val shown = runCatching {
+            popup.showAsDropDown(anchor, inset,
+                -anchor.height - hint.measuredHeight - inset, Gravity.TOP or Gravity.START)
+            popup.isShowing
+        }.getOrDefault(false)
+        if (!shown || !guidance.claimFirstHint()) {
+            runCatching { popup.dismiss() }
+            return
+        }
+        inlineHintAttempted = true
+        inlineHintPopup = popup
+        inlineHintView = hint
+        inlineHintAnchor = anchor
+        val dismiss = Runnable { if (inlineHintPopup === popup) clearInlineHint() }
+        inlineHintDismiss = dismiss
+        anchor.postDelayed(dismiss, 4000L)
+    }
+
     private fun resolveDeferredPersonalOffer() {
         val offer = deferredPersonalOffer ?: return
         deferredPersonalOffer = null
-        if (editor !== offer.info || currentInputConnection !== offer.connection ||
-            taps.language != offer.language) return
-        val stillOwned = runCatching {
-            val extracted = offer.connection.getExtractedText(ExtractedTextRequest(), 0)
-            extracted != null && extracted.startOffset >= 0 &&
-                extracted.selectionStart == extracted.selectionEnd &&
-                extracted.startOffset.toLong() + extracted.selectionEnd == offer.caret.toLong() &&
-                offer.connection.getSelectedText(0).isNullOrEmpty() &&
-                offer.connection.getTextBeforeCursor(offer.word.length + 1, 0)?.toString() ==
-                    "${offer.word} "
-        }.getOrDefault(false)
-        if (stillOwned && manualCompletions?.contains(offer.word, offer.language) == false) {
+        if (!offer.stillOwned(editor, currentInputConnection, taps.language, typedWord.pending)) return
+        if (manualCompletions?.contains(offer.word, offer.language) == false) {
             personalOffer = offer
             renderSuggestions()
+            maybeShowInlineWordHint(offer)
         }
     }
 
@@ -241,14 +360,39 @@ class ViipioInputMethodService : InputMethodService() {
     private fun refreshManualCompletions() {
         val info = editor
         val connection = currentInputConnection
-        if (!viipioOption(ViipioBehaviorPreference.TYPED_SUGGESTIONS) ||
-            info == null || connection == null || connection !== ownedConnection ||
-            info !== ownedEditor || suggestions.words.isNotEmpty() ||
-            emojiPanel?.visibility == View.VISIBLE || afterSwipeWord != null) {
+        val eligible = info != null && connection != null && connection === ownedConnection &&
+            info === ownedEditor && suggestions.words.isEmpty() &&
+            emojiPanel?.visibility != View.VISIBLE && afterSwipeWord == null
+        val savedCompleted = personalOffer?.takeIf { eligible && it.completed &&
+            it.stillOwned(info, connection, taps.language, typedWord.pending) }
+        val savedUndo = addedPersonalWord?.takeIf { eligible &&
+            it.stillOwned(info, connection, taps.language, typedWord.pending) }
+        if (!viipioOption(ViipioBehaviorPreference.TYPED_SUGGESTIONS) || !eligible) {
             manualCompletions?.clear()
-        } else manualCompletions?.update(connection, info, taps.language,
-            if (taps.language == KeyboardLanguage.ESTONIAN) etContextModel else enContextModel)
+            personalOffer = savedCompleted
+            addedPersonalWord = savedUndo
+        } else {
+            val activeInfo = info ?: return
+            val activeConnection = connection ?: return
+            manualCompletions?.update(activeConnection, activeInfo, taps.language,
+                if (taps.language == KeyboardLanguage.ESTONIAN) etContextModel else enContextModel)
+            val unfinished = typedWord.offerBeforeSpace(taps.language, activeInfo, activeConnection)
+            personalOffer = savedCompleted ?: if (unfinished != null &&
+                manualCompletions?.contains(unfinished, taps.language) == false) {
+                val extracted = runCatching {
+                    activeConnection.getExtractedText(ExtractedTextRequest(), 0)
+                }.getOrNull()
+                val absolute = extracted?.startOffset?.toLong()?.plus(extracted.selectionEnd)
+                if (extracted != null && extracted.startOffset >= 0 &&
+                    extracted.selectionStart == extracted.selectionEnd &&
+                    absolute != null && absolute in 0..Int.MAX_VALUE.toLong())
+                    ViipioInlinePersonalOffer(unfinished, taps.language, activeInfo, activeConnection,
+                        absolute.toInt(), completed = false) else null
+            } else null
+            addedPersonalWord = savedUndo
+        }
         renderSuggestions()
+        maybeShowInlineWordHint(personalOffer)
     }
 
     private fun ownSelectionAfterWrite(connection: InputConnection) {
@@ -344,7 +488,7 @@ class ViipioInputMethodService : InputMethodService() {
                     if (position != null && extracted.startOffset >= 0 &&
                         extracted.selectionStart == extracted.selectionEnd &&
                         position in 0..Int.MAX_VALUE.toLong()) {
-                        val offer = PersonalOffer(completed, taps.language, info, connection, position.toInt())
+                        val offer = ViipioInlinePersonalOffer(completed, taps.language, info, connection, position.toInt())
                         when {
                             manualCompletions == null -> deferredPersonalOffer = offer
                             manualCompletions?.contains(completed, taps.language) == false -> personalOffer = offer
@@ -352,6 +496,7 @@ class ViipioInputMethodService : InputMethodService() {
                         if (personalOffer != null || deferredPersonalOffer != null) {
                             ownSelectionAfterWrite(connection)
                             renderSuggestions()
+                            maybeShowInlineWordHint(personalOffer)
                         }
                     }
                 }
@@ -437,6 +582,8 @@ class ViipioInputMethodService : InputMethodService() {
         addedPersonalWord = null
         personalOfferRow = null
         personalOfferButton = null
+        inlineAddButton = null
+        clearInlineHint()
         clearSuggestions()
         toolbarCompact = false
         emojiPanel?.let { it.onEmojiPicked = null; it.onEditorDelete = null; it.onClose = null }
@@ -536,7 +683,8 @@ class ViipioInputMethodService : InputMethodService() {
             toolbar.addView(button, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f))
         }
         arrow.setOnClickListener {
-            if ((suggestions.words.isNotEmpty() || manualCompletions?.words?.isNotEmpty() == true) && forceToolbar) {
+            if ((suggestions.words.isNotEmpty() || manualCompletions?.words?.isNotEmpty() == true ||
+                    personalOffer != null || addedPersonalWord != null) && forceToolbar) {
                 forceToolbar = false
                 renderSuggestions()
             } else {
@@ -643,6 +791,22 @@ class ViipioInputMethodService : InputMethodService() {
         candidateSeparators = separators
         candidates.addView(scroll, LinearLayout.LayoutParams(0,
             ViewGroup.LayoutParams.MATCH_PARENT, 1f))
+        val inlineAdd = navButton("+", getString(R.string.viipio_personal_word_add)).apply {
+            tag = "viipio-inline-add-action"
+            textSize = 11f
+            maxLines = 3
+            ellipsize = null
+            breakStrategy = android.text.Layout.BREAK_STRATEGY_SIMPLE
+            setPadding((8 * dp).toInt(), 0, (8 * dp).toInt(), 0)
+            background = GradientDrawable().apply {
+                setColor(view.palette.letter)
+                cornerRadius = 16 * dp
+            }
+            visibility = View.GONE
+            setOnClickListener { handleInlinePersonalWordAction() }
+        }
+        inlineAddButton = inlineAdd
+        candidates.addView(inlineAdd, LinearLayout.LayoutParams(arrowSize, arrowSize))
         row.addView(toolbar, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.MATCH_PARENT))
         row.addView(candidates, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
@@ -660,36 +824,7 @@ class ViipioInputMethodService : InputMethodService() {
             maxLines = 1
             setTextColor(view.palette.label)
             setPadding((16 * dp).toInt(), 0, (8 * dp).toInt(), 0)
-            setOnClickListener {
-                val added = addedPersonalWord
-                val offer = personalOffer
-                val current = added ?: offer ?: return@setOnClickListener
-                val lang = if (current.language == KeyboardLanguage.ESTONIAN) "et" else "en"
-                if (added != null) {
-                    if (!personalWordRefresh.remove(lang, current.word)) {
-                        Toast.makeText(this@ViipioInputMethodService,
-                            R.string.viipio_inline_word_unavailable, Toast.LENGTH_SHORT).show()
-                    }
-                    addedPersonalWord = null
-                } else if (offer != null && editor === offer.info &&
-                    currentInputConnection === offer.connection && taps.language == offer.language &&
-                    runCatching {
-                        val extracted = offer.connection.getExtractedText(ExtractedTextRequest(), 0)
-                        extracted != null && extracted.startOffset >= 0 &&
-                            extracted.selectionStart == extracted.selectionEnd &&
-                            extracted.startOffset.toLong() + extracted.selectionEnd == offer.caret.toLong() &&
-                            offer.connection.getSelectedText(0).isNullOrEmpty() &&
-                            offer.connection.getTextBeforeCursor(offer.word.length + 1, 0)?.toString() ==
-                                "${offer.word} "
-                    }.getOrDefault(false)) {
-                    if (personalWordRefresh.add(lang, offer.word) == ViipioPersonalWords.AddResult.ADDED) {
-                        addedPersonalWord = offer
-                    } else Toast.makeText(this@ViipioInputMethodService,
-                        R.string.viipio_inline_word_unavailable, Toast.LENGTH_SHORT).show()
-                }
-                personalOffer = null
-                renderSuggestions()
-            }
+            setOnClickListener { handleInlinePersonalWordAction() }
         }
         personalOfferButton = offerAction
         offerRow.addView(offerAction, LinearLayout.LayoutParams(0,
@@ -748,6 +883,7 @@ class ViipioInputMethodService : InputMethodService() {
 
     override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
         super.onStartInput(attribute, restarting)
+        clearInlineHint()
         surface?.cancelActiveTouch()
         inputEvidence.reset()
         finishTelemetryField()
@@ -774,6 +910,7 @@ class ViipioInputMethodService : InputMethodService() {
     }
 
     override fun onFinishInput() {
+        clearInlineHint()
         surface?.cancelActiveTouch()
         finishTelemetryField()
         pendingCorrection = null
@@ -848,6 +985,7 @@ class ViipioInputMethodService : InputMethodService() {
     }
 
     override fun onFinishInputView(finishingInput: Boolean) {
+        clearInlineHint()
         surface?.cancelActiveTouch()
         finishTelemetryField()
         pendingCorrection = null
@@ -931,6 +1069,7 @@ class ViipioInputMethodService : InputMethodService() {
     }
 
     override fun onDestroy() {
+        clearInlineHint()
         finishTelemetryField()
         typedWord.clear()
         personalOffer = null

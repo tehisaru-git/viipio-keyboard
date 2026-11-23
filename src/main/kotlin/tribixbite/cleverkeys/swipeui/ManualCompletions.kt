@@ -15,6 +15,7 @@ import java.util.Locale
 internal class ManualCompletions private constructor(
     private val indexes: Map<KeyboardLanguage, PrefixIndex>,
     private val personalWords: (KeyboardLanguage) -> List<String>,
+    private val personalPresence: (KeyboardLanguage, String) -> Boolean?,
 ) {
     private data class Offer(val connection: InputConnection, val caret: Int, val before: String,
                              val after: String, val start: Int, val end: Int,
@@ -28,13 +29,14 @@ internal class ManualCompletions private constructor(
     /** Only known words suppress the explicit inline personal-word offer. */
     fun contains(word: String, language: KeyboardLanguage): Boolean {
         if (!ViipioPersonalWords.validWord(word)) return false
-        val personal = try { personalWords(language) } catch (_: Exception) { return true }
-        if (personal.any { it.equals(word, ignoreCase = true) }) return true
+        val present = try { personalPresence(language, word) } catch (_: Exception) { null }
+        if (present != false) return true // Unreadable CE storage is not an empty dictionary.
         return indexes[language]?.contains(word) ?: true
     }
 
     fun update(connection: InputConnection, info: EditorInfo, language: KeyboardLanguage,
                contextModel: StaticContextLm? = null): List<String> {
+        return try {
         clear()
         if (!allowed(info)) return words
         val extracted = connection.getExtractedText(ExtractedTextRequest(), 0) ?: return words
@@ -98,6 +100,10 @@ internal class ManualCompletions private constructor(
         offer = Offer(connection, caret, before, after, caret - (before.length - start),
             caret + suffixLength, word, words)
         return words
+    } catch (_: Exception) {
+        clear()
+        words
+        }
     }
 
     fun choose(connection: InputConnection, index: Int): Boolean {
@@ -226,9 +232,14 @@ internal class ManualCompletions private constructor(
         }
 
         fun fromEntries(et: List<Pair<String, Int>>, en: List<Pair<String, Int>>,
-                        personalWords: (KeyboardLanguage) -> List<String> = { emptyList() }) =
-            ManualCompletions(mapOf(KeyboardLanguage.ESTONIAN to PrefixIndex(et),
-                KeyboardLanguage.ENGLISH to PrefixIndex(en)), personalWords)
+                        personalPresence: ((KeyboardLanguage, String) -> Boolean?)? = null,
+                        personalWords: (KeyboardLanguage) -> List<String> = { emptyList() }): ManualCompletions {
+            val presence = personalPresence ?: { language: KeyboardLanguage, word: String ->
+                personalWords(language).any { it.equals(word, ignoreCase = true) }
+            }
+            return ManualCompletions(mapOf(KeyboardLanguage.ESTONIAN to PrefixIndex(et),
+                KeyboardLanguage.ENGLISH to PrefixIndex(en)), personalWords, presence)
+        }
 
         fun fromBundledAssets(context: Context): ManualCompletions {
             val personal = ViipioPersonalWords(context)
@@ -238,6 +249,8 @@ internal class ManualCompletions private constructor(
             },
             context.assets.open("dictionaries/en_enhanced.bin").use { input ->
                 CkdtDictionaryReader.readEntries(input).map { it.word to it.rank }
+            }, personalPresence = { language, word ->
+                personal.containsExact(if (language == KeyboardLanguage.ESTONIAN) "et" else "en", word)
             }) { language -> personal.words(if (language == KeyboardLanguage.ESTONIAN) "et" else "en") }
         }
     }

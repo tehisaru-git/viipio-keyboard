@@ -145,7 +145,7 @@ dependencies {
 // UPDATE ONLY THESE THREE VALUES FOR A NEW RELEASE:
 ext.VERSION_MAJOR = 0
 ext.VERSION_MINOR = 10
-ext.VERSION_PATCH = 0
+ext.VERSION_PATCH = 1
 // =============================================================================
 // DERIVED VALUES (auto-calculated, do not edit):
 // - versionCode = MAJOR*10000 + MINOR*100 + PATCH
@@ -1366,6 +1366,8 @@ tasks.register('runMockTests', JavaExec) {
     // in the explicit ARM64 runner as well as Gradle's discovered JVM suite.
     'tribixbite.cleverkeys.EmojiKeywordIndexTypoTest',
     'tribixbite.cleverkeys.ViipioInputMethodServiceTest',
+    'tribixbite.cleverkeys.ViipioInlinePersonalOfferTest',
+    'tribixbite.cleverkeys.ViipioInlineWordGuidanceTest',
     // Viipio v0.10.0: local consent, CE revision, editor-confirmed Space and field gate.
     'tribixbite.cleverkeys.ViipioCorrectionConfirmationTest',
     'tribixbite.cleverkeys.ViipioCorrectionLearningPreferenceTest',

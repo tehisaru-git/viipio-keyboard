@@ -304,6 +304,8 @@ private fun SettingsActivity.PersonalWordsControls() {
                 style = MaterialTheme.typography.titleMedium)
             Text(stringResource(R.string.viipio_personal_words_detail),
                 style = MaterialTheme.typography.bodySmall)
+            Text(stringResource(R.string.viipio_inline_word_help),
+                style = MaterialTheme.typography.bodySmall)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip(selected = language == "et",
                     onClick = { language = "et"; draft = ""; feedback = "" },

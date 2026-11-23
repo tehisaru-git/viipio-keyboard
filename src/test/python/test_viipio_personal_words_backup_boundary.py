@@ -1,4 +1,4 @@
-"""New user-entered words are not in either automatic Android backup allowlist."""
+"""New user-entered words and the one-time hint stay out of Android backup."""
 from pathlib import Path
 import unittest
 import xml.etree.ElementTree as ET
@@ -14,6 +14,7 @@ class PersonalWordsBackupBoundaryTest(unittest.TestCase):
                         if node.attrib.get('domain') == 'sharedpref']
             self.assertTrue(includes, name)  # An include-only allowlist, not default-all.
             self.assertNotIn('viipio_personal_words.xml', includes, name)
+            self.assertNotIn('viipio_inline_word_guidance.xml', includes, name)
             self.assertNotIn('.', includes, name)
 
 

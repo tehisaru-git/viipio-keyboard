@@ -457,6 +457,285 @@ class ViipioInputMethodServiceTest {
         assertEquals(0, scroll.scrollX)
     }
 
+    private fun attachInlineHintWindow(layout: LinearLayout): android.app.Activity {
+        val activity = Robolectric.buildActivity(android.app.Activity::class.java).setup().get()
+        val root = FrameLayout(activity)
+        activity.setContentView(root)
+        root.addView(layout, FrameLayout.LayoutParams(
+            android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+            android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
+            android.view.Gravity.BOTTOM))
+        val width = View.MeasureSpec.makeMeasureSpec(720, View.MeasureSpec.EXACTLY)
+        val height = View.MeasureSpec.makeMeasureSpec(1600, View.MeasureSpec.EXACTLY)
+        root.measure(width, height)
+        root.layout(0, 0, 720, 1600)
+        assertTrue("hint anchor must have a real window", layout.isAttachedToWindow)
+        assertTrue("hint anchor must be laid out", layout.getChildAt(0).width > 0)
+        return activity
+    }
+
+    private fun activeInlineHintPopup(service: ViipioInputMethodService): android.widget.PopupWindow =
+        ViipioInputMethodService::class.java.getDeclaredField("inlineHintPopup")
+            .apply { isAccessible = true }.get(service) as? android.widget.PopupWindow
+            ?: error("inline hint popup was not displayed")
+
+    @Test fun firstAddHintIsVisibleInsideTheImeWithoutReplacingCandidates() {
+        val service = Robolectric.buildService(ViipioInputMethodService::class.java).get()
+        val prefs = service.applicationContext.getSharedPreferences(
+            "viipio_inline_word_guidance", android.content.Context.MODE_PRIVATE)
+        assertTrue(prefs.edit().clear().commit())
+        val layout = service.onCreateInputView() as LinearLayout
+        val candidatesBar = layout.getChildAt(0)
+        attachInlineHintWindow(layout)
+        val info = EditorInfo().apply {
+            packageName = "org.example.synthetic"
+            inputType = InputType.TYPE_CLASS_TEXT
+        }
+        val connection = EditText(service).onCreateInputConnection(info)
+        val offer = ViipioInlinePersonalOffer("sii", KeyboardLanguage.ESTONIAN,
+            info, connection, 3, completed = false)
+        ViipioInputMethodService::class.java.getDeclaredMethod("maybeShowInlineWordHint",
+            ViipioInlinePersonalOffer::class.java).apply { isAccessible = true }.invoke(service, offer)
+        assertTrue("fresh eligible offer must claim the durable hint flag",
+            prefs.getBoolean("shown", false))
+        val popup = activeInlineHintPopup(service)
+        val hint = popup.contentView as TextView
+        assertTrue("hint must be visible even when OS suppresses Toasts", popup.isShowing)
+        assertEquals("viipio-inline-first-hint", hint.tag)
+        assertTrue(hint.text.toString().contains("Tap + Add"))
+        assertTrue(hint.text.toString().contains("undo"))
+        assertEquals("popup must not add a row to the IME", 3, layout.childCount)
+        assertSame("suggestion row must remain present", candidatesBar, layout.getChildAt(0))
+    }
+
+    @Test fun firstAddHintIsRemovedWhenTheImeIsDestroyed() {
+        val service = Robolectric.buildService(ViipioInputMethodService::class.java).get()
+        val prefs = service.applicationContext.getSharedPreferences(
+            "viipio_inline_word_guidance", android.content.Context.MODE_PRIVATE)
+        assertTrue(prefs.edit().clear().commit())
+        val layout = service.onCreateInputView() as LinearLayout
+        attachInlineHintWindow(layout)
+        val info = EditorInfo().apply {
+            packageName = "org.example.synthetic"
+            inputType = InputType.TYPE_CLASS_TEXT
+        }
+        val offer = ViipioInlinePersonalOffer("sii", KeyboardLanguage.ESTONIAN,
+            info, EditText(service).onCreateInputConnection(info), 3, completed = false)
+        ViipioInputMethodService::class.java.getDeclaredMethod("maybeShowInlineWordHint",
+            ViipioInlinePersonalOffer::class.java).apply { isAccessible = true }.invoke(service, offer)
+        val popup = activeInlineHintPopup(service)
+        assertTrue(popup.isShowing)
+        // Robolectric's bare IME has no window root; only its framework super teardown throws.
+        val teardown = runCatching { service.onDestroy() }.exceptionOrNull()
+        assertTrue(teardown is NullPointerException &&
+            teardown.message.orEmpty().contains("mRootView"))
+        assertFalse("destroyed IME must dismiss transient popup and callback", popup.isShowing)
+    }
+
+    @Test fun firstAddHintSurvivesTheNextOwnedLetterRefresh() {
+        val service = Robolectric.buildService(ViipioInputMethodService::class.java).get()
+        val prefs = service.applicationContext.getSharedPreferences(
+            "viipio_inline_word_guidance", android.content.Context.MODE_PRIVATE)
+        assertTrue(prefs.edit().clear().commit())
+        val layout = service.onCreateInputView() as LinearLayout
+        attachInlineHintWindow(layout)
+        val info = EditorInfo().apply {
+            packageName = "org.example.synthetic"
+            inputType = InputType.TYPE_CLASS_TEXT
+        }
+        val connection = EditText(service).onCreateInputConnection(info)
+        val offer = ViipioInlinePersonalOffer("sii", KeyboardLanguage.ESTONIAN,
+            info, connection, 3, completed = false)
+        ViipioInputMethodService::class.java.getDeclaredField("editor")
+            .apply { isAccessible = true }.set(service, info)
+        val slot = ViipioInputMethodService::class.java.getDeclaredField("personalOffer")
+            .apply { isAccessible = true }
+        slot.set(service, offer)
+        ViipioInputMethodService::class.java.getDeclaredMethod("maybeShowInlineWordHint",
+            ViipioInlinePersonalOffer::class.java).apply { isAccessible = true }.invoke(service, offer)
+        val popup = activeInlineHintPopup(service)
+        assertTrue(popup.isShowing)
+        slot.set(service, null) // handleGesture temporarily clears the prior offer on each own key.
+        ViipioInputMethodService::class.java.getDeclaredMethod("renderSuggestions")
+            .apply { isAccessible = true }.invoke(service)
+        assertTrue("next letter must not consume the one-time guidance", popup.isShowing)
+    }
+
+    @Test fun firstAddHintIsHiddenBeforeSwitchingToPasswordEditor() {
+        val service = Robolectric.buildService(ViipioInputMethodService::class.java).get()
+        val prefs = service.applicationContext.getSharedPreferences(
+            "viipio_inline_word_guidance", android.content.Context.MODE_PRIVATE)
+        assertTrue(prefs.edit().clear().commit())
+        val layout = service.onCreateInputView() as LinearLayout
+        attachInlineHintWindow(layout)
+        val info = EditorInfo().apply {
+            packageName = "org.example.synthetic"
+            inputType = InputType.TYPE_CLASS_TEXT
+        }
+        service.onStartInput(info, false)
+        val offer = ViipioInlinePersonalOffer("sii", KeyboardLanguage.ESTONIAN,
+            info, EditText(service).onCreateInputConnection(info), 3, completed = false)
+        ViipioInputMethodService::class.java.getDeclaredMethod("maybeShowInlineWordHint",
+            ViipioInlinePersonalOffer::class.java).apply { isAccessible = true }.invoke(service, offer)
+        val popup = activeInlineHintPopup(service)
+        assertTrue(popup.isShowing)
+        val password = EditorInfo().apply {
+            packageName = "org.example.synthetic.secret"
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+        }
+        service.onStartInput(password, false)
+        assertFalse("first-use hint must not leak into a password editor", popup.isShowing)
+    }
+
+    @Test fun firstAddHintDoesNotIncreaseImeMeasuredHeight() {
+        val service = Robolectric.buildService(ViipioInputMethodService::class.java).get()
+        val prefs = service.applicationContext.getSharedPreferences(
+            "viipio_inline_word_guidance", android.content.Context.MODE_PRIVATE)
+        assertTrue(prefs.edit().clear().commit())
+        val layout = service.onCreateInputView() as LinearLayout
+        attachInlineHintWindow(layout)
+        val width = View.MeasureSpec.makeMeasureSpec(720, View.MeasureSpec.EXACTLY)
+        val available = View.MeasureSpec.makeMeasureSpec(1600, View.MeasureSpec.AT_MOST)
+        layout.measure(width, available)
+        val originalHeight = layout.measuredHeight
+        val info = EditorInfo().apply {
+            packageName = "org.example.synthetic"
+            inputType = InputType.TYPE_CLASS_TEXT
+        }
+        val offer = ViipioInlinePersonalOffer("sii", KeyboardLanguage.ESTONIAN,
+            info, EditText(service).onCreateInputConnection(info), 3, completed = false)
+        ViipioInputMethodService::class.java.getDeclaredMethod("maybeShowInlineWordHint",
+            ViipioInlinePersonalOffer::class.java).apply { isAccessible = true }.invoke(service, offer)
+        assertTrue("height check must exercise a displayed popup", activeInlineHintPopup(service).isShowing)
+        layout.measure(width, available)
+        assertEquals("first-use help must not move the IME boundary", originalHeight,
+            layout.measuredHeight)
+    }
+
+    @Test fun candidateStripKeepsThreeLabelsBesidePinnedInlineAddAction() {
+        val service = Robolectric.buildService(ViipioInputMethodService::class.java).get()
+        val layout = service.onCreateInputView() as LinearLayout
+        val bar = layout.getChildAt(0) as FrameLayout
+        val candidates = bar.getChildAt(1) as LinearLayout
+        val action = (0 until candidates.childCount).map { candidates.getChildAt(it) }
+            .firstOrNull { it.tag == "viipio-inline-add-action" }
+        assertNotNull("unknown own-key word needs a pinned Add/Undo action", action)
+        val dp = service.resources.displayMetrics.density
+        assertTrue(action!!.layoutParams.width / dp >= 48f)
+        assertEquals(3, candidates.childCount)
+        val track = (candidates.getChildAt(1) as HorizontalScrollView).getChildAt(0) as LinearLayout
+        assertEquals(5, track.childCount)
+        assertTrue((0..2).all { track.getChildAt(it * 2) is CandidateLabelView })
+        assertEquals((48 * dp).toInt(), bar.layoutParams.height)
+    }
+
+    @Test fun visibleInlineAddActionNamesExactWordAndLanguageAlongsideCandidates() {
+        val service = Robolectric.buildService(ViipioInputMethodService::class.java).get()
+        val layout = service.onCreateInputView() as LinearLayout
+        val candidates = ((layout.getChildAt(0) as FrameLayout).getChildAt(1) as LinearLayout)
+        val action = candidates.getChildAt(2) as TextView
+        val controller = ViipioInputMethodService::class.java.getDeclaredField("suggestions")
+            .apply { isAccessible = true }.get(service) as EstonianSuggestionController
+        EstonianSuggestionController::class.java.getDeclaredField("words")
+            .apply { isAccessible = true }.set(controller, listOf("first", "second", "third"))
+        val info = EditorInfo().apply { packageName = "org.example.synthetic"; inputType = InputType.TYPE_CLASS_TEXT }
+        val connection = EditText(service).onCreateInputConnection(info)
+        val slot = ViipioInputMethodService::class.java.getDeclaredField("personalOffer")
+            .apply { isAccessible = true }
+        val render = ViipioInputMethodService::class.java.getDeclaredMethod("renderSuggestions")
+            .apply { isAccessible = true }
+        slot.set(service, ViipioInlinePersonalOffer("mhm", KeyboardLanguage.ESTONIAN,
+            info, connection, 3, completed = false))
+        render.invoke(service)
+        assertEquals(View.VISIBLE, action.visibility)
+        assertTrue(action.text.toString().contains("mhm"))
+        assertTrue(action.text.toString().contains("ET"))
+        assertTrue(action.contentDescription.toString().contains("mhm"))
+        slot.set(service, ViipioInlinePersonalOffer("zoop", KeyboardLanguage.ENGLISH,
+            info, connection, 4, completed = false))
+        render.invoke(service)
+        assertTrue(action.text.toString().contains("zoop"))
+        assertTrue(action.text.toString().contains("EN"))
+    }
+
+    @Test fun longInlineLabelDoesNotEllipsizeTheWordOrLanguage() {
+        val service = Robolectric.buildService(ViipioInputMethodService::class.java).get()
+        val layout = service.onCreateInputView() as LinearLayout
+        val candidates = (layout.getChildAt(0) as FrameLayout).getChildAt(1) as LinearLayout
+        val action = candidates.getChildAt(2) as TextView
+        val controller = ViipioInputMethodService::class.java.getDeclaredField("suggestions")
+            .apply { isAccessible = true }.get(service) as EstonianSuggestionController
+        EstonianSuggestionController::class.java.getDeclaredField("words")
+            .apply { isAccessible = true }.set(controller, listOf("one", "two", "three"))
+        val info = EditorInfo().apply { packageName = "org.example.synthetic"; inputType = InputType.TYPE_CLASS_TEXT }
+        val connection = EditText(service).onCreateInputConnection(info)
+        val word = "W".repeat(40)
+        ViipioInputMethodService::class.java.getDeclaredField("personalOffer")
+            .apply { isAccessible = true }.set(service, ViipioInlinePersonalOffer(word,
+                KeyboardLanguage.ESTONIAN, info, connection, 40, completed = false))
+        ViipioInputMethodService::class.java.getDeclaredMethod("renderSuggestions")
+            .apply { isAccessible = true }.invoke(service)
+        val w = action.layoutParams.width
+        val h = action.layoutParams.height
+        action.measure(View.MeasureSpec.makeMeasureSpec(w, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(h, View.MeasureSpec.EXACTLY))
+        action.layout(0, 0, w, h)
+        val lines = action.layout ?: error("text layout missing")
+        val last = lines.lineCount - 1
+        assertTrue(action.text.toString().contains(word))
+        assertTrue(action.text.toString().endsWith("ET"))
+        assertEquals(action.text.length, lines.getLineEnd(last))
+        assertEquals(0, lines.getEllipsisCount(last))
+        assertTrue("last line must remain inside the 48dp tap target",
+            lines.getLineBottom(last) <= h - action.paddingTop - action.paddingBottom)
+    }
+
+    @Test
+    @org.robolectric.annotation.Config(qualifiers = "w320dp-h640dp")
+    fun longInlineLabelFitsAtLargeAccessibilityTextScale() {
+        val service = Robolectric.buildService(ViipioInputMethodService::class.java).get()
+        val resources = service.resources
+        val original = android.content.res.Configuration(resources.configuration)
+        val metrics = android.util.DisplayMetrics().apply { setTo(resources.displayMetrics) }
+        try {
+            val enlarged = android.content.res.Configuration(original).apply { fontScale = 2f }
+            metrics.scaledDensity = metrics.density * 2f
+            resources.updateConfiguration(enlarged, metrics)
+            val layout = service.onCreateInputView() as LinearLayout
+            val candidates = (layout.getChildAt(0) as FrameLayout).getChildAt(1) as LinearLayout
+            val action = candidates.getChildAt(2) as TextView
+            val controller = ViipioInputMethodService::class.java.getDeclaredField("suggestions")
+                .apply { isAccessible = true }.get(service) as EstonianSuggestionController
+            EstonianSuggestionController::class.java.getDeclaredField("words")
+                .apply { isAccessible = true }.set(controller, listOf("one", "two", "three"))
+            val info = EditorInfo().apply { packageName = "org.example.synthetic"; inputType = InputType.TYPE_CLASS_TEXT }
+            val connection = EditText(service).onCreateInputConnection(info)
+            val word = "W".repeat(40)
+            ViipioInputMethodService::class.java.getDeclaredField("personalOffer")
+                .apply { isAccessible = true }.set(service, ViipioInlinePersonalOffer(word,
+                    KeyboardLanguage.ENGLISH, info, connection, 40, completed = false))
+            ViipioInputMethodService::class.java.getDeclaredMethod("renderSuggestions")
+                .apply { isAccessible = true }.invoke(service)
+            assertTrue("the fixture must actually enlarge the chip font",
+                action.textSize > 16.5f * resources.displayMetrics.density)
+            val w = action.layoutParams.width
+            val h = action.layoutParams.height
+            action.measure(View.MeasureSpec.makeMeasureSpec(w, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(h, View.MeasureSpec.EXACTLY))
+            action.layout(0, 0, w, h)
+            val lines = action.layout ?: error("text layout missing")
+            val last = lines.lineCount - 1
+            assertTrue(action.text.toString().contains(word))
+            assertTrue(action.text.toString().endsWith("EN"))
+            assertEquals(action.text.length, lines.getLineEnd(last))
+            assertEquals(0, lines.getEllipsisCount(last))
+            assertTrue("large text must fit the existing toolbar height",
+                lines.getLineBottom(last) <= h - action.paddingTop - action.paddingBottom)
+        } finally {
+            resources.updateConfiguration(original, metrics)
+        }
+    }
+
     @Test fun inlinePersonalWordOfferFitsExistingToolbarAndStartsHidden() {
         val service = Robolectric.buildService(ViipioInputMethodService::class.java).get()
         val layout = service.onCreateInputView() as LinearLayout
@@ -498,7 +777,8 @@ class ViipioInputMethodServiceTest {
         assertEquals(View.VISIBLE, toolbar.visibility)
         assertEquals(View.GONE, candidates.visibility)
         assertTrue((layout.getChildAt(2).layoutParams.height / service.resources.displayMetrics.density) >= 280f)
-        assertEquals(2, candidates.childCount)
+        assertEquals(3, candidates.childCount)
+        assertEquals("viipio-inline-add-action", candidates.getChildAt(2).tag)
         val track = (candidates.getChildAt(1) as HorizontalScrollView).getChildAt(0) as LinearLayout
         assertEquals(5, track.childCount)
         assertTrue((0..2).all { track.getChildAt(it * 2) is CandidateLabelView })

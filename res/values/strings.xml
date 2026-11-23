@@ -59,9 +59,12 @@
     <string name="viipio_personal_word_label" translatable="false">Word (2–48 letters)</string>
     <string name="viipio_personal_word_add" translatable="false">Add word</string>
     <string name="viipio_inline_word_add" translatable="false">Add %1$s to %2$s words</string>
+    <string name="viipio_inline_word_compact_add" translatable="false">+ Add “%1$s” · %2$s</string>
     <string name="viipio_inline_word_added" translatable="false">Added %1$s · Undo</string>
     <string name="viipio_inline_word_dismiss" translatable="false">Dismiss word offer</string>
-    <string name="viipio_inline_word_unavailable" translatable="false">Could not save word</string>
+    <string name="viipio_inline_word_unavailable" translatable="false">Could not update personal words. Try again.</string>
+    <string name="viipio_inline_word_first_hint" translatable="false">New word? Tap + Add while typing to save it. You can undo right away.</string>
+    <string name="viipio_inline_word_help" translatable="false">While typing a new word, tap + Add beside the suggestions to save it to the selected ET or EN language. Tap Undo to reverse it. Typing or pressing Space alone never saves a word.</string>
     <string name="viipio_personal_word_remove" translatable="false">Remove %1$s</string>
     <string name="viipio_personal_words_empty" translatable="false">No personal words for this language yet</string>
     <string name="viipio_word_added" translatable="false">Word added</string>

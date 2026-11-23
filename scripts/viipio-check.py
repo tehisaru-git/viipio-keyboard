@@ -13,6 +13,8 @@ ROOT = Path(__file__).resolve().parents[1]
 REPORTS = ROOT / "build/test-results/testDebugUnitTest"
 TARGETED = (
     "tribixbite.cleverkeys.ViipioInputMethodServiceTest",
+    "tribixbite.cleverkeys.ViipioInlinePersonalOfferTest",
+    "tribixbite.cleverkeys.ViipioInlineWordGuidanceTest",
     "tribixbite.cleverkeys.ReleaseMetadataDriftTest",
     "tribixbite.cleverkeys.ViipioPersonalWordsTest",
     "tribixbite.cleverkeys.swipe.ctc.CtcLexiconMergeTest",

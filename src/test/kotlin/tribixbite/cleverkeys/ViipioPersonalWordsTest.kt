@@ -70,6 +70,7 @@ class ViipioPersonalWordsTest {
         assertEquals(255, JSONObject(credential.getString("custom_words_et", "{}")!!).getInt("mhm"))
         val locked = ViipioPersonalWords(context, fileName = file, isUnlocked = { false })
         assertTrue(locked.words("et").isEmpty())
+        assertNull(locked.containsExact("et", "mhm"))
         assertEquals(ViipioPersonalWords.AddResult.UNAVAILABLE, locked.add("et", "tere"))
         assertFalse(locked.remove("et", "mhm"))
         assertEquals(listOf("mhm"), words.words("et"))
@@ -99,6 +100,42 @@ class ViipioPersonalWordsTest {
             assertFalse(stage, words.remove("et", "tere"))
             assertEquals(stage, "{\"tere\":12}", base.getString("custom_words_et", null))
         }
+    }
+
+    /** Simulate Android applying an edit in memory before reporting a failed disk commit. */
+    private fun memoryChangedButCommitReportsFailure(base: SharedPreferences): SharedPreferences =
+        object : SharedPreferences by base {
+            override fun edit(): SharedPreferences.Editor {
+                val real = base.edit()
+                return object : SharedPreferences.Editor by real {
+                    override fun putString(key: String?, value: String?): SharedPreferences.Editor {
+                        real.putString(key, value)
+                        return this
+                    }
+                    override fun commit(): Boolean {
+                        real.commit()
+                        return false
+                    }
+                }
+            }
+        }
+
+    @Test fun failedAddCommitRestoresMemoryAndRemainsRetryable() {
+        val (base, _) = store("viipio-commit-false-add")
+        val words = ViipioPersonalWords(memoryChangedButCommitReportsFailure(base))
+        assertEquals(ViipioPersonalWords.AddResult.UNAVAILABLE, words.add("et", "mhm"))
+        assertTrue(words.words("et").isEmpty())
+        assertFalse(base.contains(ViipioPersonalWords.key("et")))
+        assertEquals(ViipioPersonalWords.AddResult.ADDED, ViipioPersonalWords(base).add("et", "mhm"))
+    }
+
+    @Test fun failedUndoCommitRestoresMemoryAndRemainsRetryable() {
+        val (base, _) = store("viipio-commit-false-undo")
+        assertEquals(ViipioPersonalWords.AddResult.ADDED, ViipioPersonalWords(base).add("et", "mhm"))
+        val words = ViipioPersonalWords(memoryChangedButCommitReportsFailure(base))
+        assertFalse(words.remove("et", "mhm"))
+        assertEquals(listOf("mhm"), words.words("et"))
+        assertTrue(ViipioPersonalWords(base).remove("et", "mhm"))
     }
 
     @Test fun successfulPersonalMutationRefreshesDecoderOnlyAfterDurableWrite() {

@@ -6,12 +6,14 @@ Viipio is an experimental offline Android keyboard. Its name is language-neutral
 
 - [README](../README.md) — current install instructions, capabilities, limits and update compatibility.
 - [Viipio identity](branding/viipio.md) — name, artwork and branding guidance.
+- [v0.10.1 candidate verification](releases/v0.10.1.md) — **not published**; inline ET/EN personal-word Add/Undo, first-use guidance and release gates.
+- [v0.10.1 candidate GitHub notes](releases/v0.10.1-github.md) and [inline word-add contract](specs/viipio-inline-personal-word.md) — draft scope, not an installable release.
 - [v0.10.0 release verification](releases/v0.10.0.md) — ET exact-word exclusion, guarded EN swipe context, ET/EN typed context, opt-in local corrections, full JVM and signed emulator gates, plus public byte-identical APK readback.
 - [v0.10.0 GitHub release notes](releases/v0.10.0-github.md) — published [normal latest release](https://github.com/tehisaru-git/viipio-keyboard/releases/tag/v0.10.0) with one signed ARM64 APK.
 - [ET static model provenance and heldout test](research/viipio-et-static-lm.md) — pinned Leipzig/Tatoeba source, attribution, reproducibility and limitation.
 - [v0.10.0 ranking protocol](eval/viipio-v010-ranking-design.md) — data limits, privacy policy and planned before/after evaluation.
 - [v0.9.1 release verification](releases/v0.9.1.md) — continuous emoji categories, tone choices, kaomoji layout, signed update and physical-device limits.
-- [v0.9.1 GitHub release body](releases/v0.9.1-github.md) — current ARM64 APK, checksum and validation limits.
+- [v0.9.1 GitHub release body](releases/v0.9.1-github.md) — historical ARM64 APK, checksum and validation limits.
 - [Gboard emoji scroll/tone observation](research/gboard-emoji-scroll-tone-observation.md) — bounded emulator behavior and icon proportions; no copied code or artwork.
 - [v0.9.0 release verification](releases/v0.9.0.md) — emoji browse Backspace, separate privacy erasure, signed update and remaining limits; public APK checked after release.
 - [v0.9.0 GitHub release body](releases/v0.9.0-github.md) — previous ARM64 APK, checks and update path.

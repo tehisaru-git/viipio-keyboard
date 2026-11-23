@@ -15,6 +15,8 @@ import org.robolectric.RuntimeEnvironment
 import tribixbite.cleverkeys.estonianui.KeyboardLanguage
 import tribixbite.cleverkeys.StaticContextLm
 import tribixbite.cleverkeys.StaticContextLmFixtures
+import tribixbite.cleverkeys.ViipioPersonalWords
+import android.content.Context
 
 @RunWith(RobolectricTestRunner::class)
 class ManualCompletionsTest {
@@ -23,6 +25,29 @@ class ManualCompletionsTest {
     private fun info(type: Int = InputType.TYPE_CLASS_TEXT) = EditorInfo().apply {
         inputType = type
         packageName = "example.editor"
+    }
+
+    @Test fun malformedPersonalStoreCannotCreateAnInlineAddOffer() {
+        val context: Context = RuntimeEnvironment.getApplication()
+        val prefs = context.getSharedPreferences(ViipioPersonalWords.PREFS_FILE, Context.MODE_PRIVATE)
+        val key = ViipioPersonalWords.key("et")
+        val previous = prefs.getString(key, null)
+        try {
+            assertThat(prefs.edit().putString(key, "invalid JSON").commit()).isTrue()
+            val completions = ManualCompletions.fromBundledAssets(context)
+            assertThat(completions.contains("zzzyyyqqqqq", KeyboardLanguage.ESTONIAN)).isTrue()
+        } finally {
+            prefs.edit().putString(key, previous).commit()
+        }
+    }
+
+    @Test fun editorReadbackExceptionClearsManualSuggestionsInsteadOfCrashingIme() {
+        val completions = ManualCompletions.fromEntries(et, en)
+        val field = Field("ter")
+        assertThat(completions.update(field.connection, info(), KeyboardLanguage.ESTONIAN)).isNotEmpty()
+        every { field.connection.getExtractedText(any(), any()) } throws IllegalStateException("editor detached")
+        assertThat(completions.update(field.connection, info(), KeyboardLanguage.ESTONIAN)).isEmpty()
+        assertThat(completions.words).isEmpty()
     }
 
     @Test fun privateEditorsNeverReadOrDisplayPersonalWords() {

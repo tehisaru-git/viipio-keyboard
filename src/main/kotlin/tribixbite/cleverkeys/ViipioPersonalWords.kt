@@ -27,6 +27,11 @@ internal class ViipioPersonalWords private constructor(
         json.keys().asSequence().filter(::validWord).sortedBy { it.lowercase(Locale.ROOT) }.toList()
     }.orEmpty()
 
+    /** Null means unreadable CE storage; unknown must not be inferred from an empty UI list. */
+    fun containsExact(language: String, word: String): Boolean? =
+        if (!validLanguage(language) || !validWord(word)) null
+        else read(language)?.keys()?.asSequence()?.any { it.equals(word, ignoreCase = true) }
+
     /** Validated raw JSON for the shared legacy + CE swipe-lexicon merge. */
     fun json(language: String): String = read(language)?.toString() ?: "{}"
 
@@ -36,9 +41,11 @@ internal class ViipioPersonalWords private constructor(
         if (json.keys().asSequence().any { it.equals(word, ignoreCase = true) }) return AddResult.EXISTS
         if (json.length() >= MAX_WORDS) return AddResult.FULL
         json.put(word, 255)
+        val storageKey = key(language)
         return try {
-            if (prefs.edit().putString(key(language), json.toString()).commit())
-                AddResult.ADDED else AddResult.UNAVAILABLE
+            val previous = prefs.getString(storageKey, null)
+            if (commitOrRestore(storageKey, json.toString(), previous)) AddResult.ADDED
+            else AddResult.UNAVAILABLE
         } catch (_: Exception) { AddResult.UNAVAILABLE }
     }
 
@@ -48,8 +55,25 @@ internal class ViipioPersonalWords private constructor(
         val matching = json.keys().asSequence().filter { it.equals(word, ignoreCase = true) }.toList()
         if (matching.isEmpty()) return false
         matching.forEach { json.remove(it) }
-        return try { prefs.edit().putString(key(language), json.toString()).commit() }
-        catch (_: Exception) { false }
+        val storageKey = key(language)
+        return try {
+            val previous = prefs.getString(storageKey, null)
+            commitOrRestore(storageKey, json.toString(), previous)
+        } catch (_: Exception) { false }
+    }
+
+    /** A failed commit may already have changed SharedPreferences' in-memory map. */
+    private fun commitOrRestore(storageKey: String, next: String, previous: String?): Boolean {
+        val committed = try { prefs.edit().putString(storageKey, next).commit() }
+            catch (_: Exception) { false }
+        if (!committed) {
+            // Revert only our attempted value; never overwrite a newer concurrent edit.
+            try {
+                if (prefs.getString(storageKey, null) == next)
+                    prefs.edit().putString(storageKey, previous).commit()
+            } catch (_: Exception) { /* No durable result may be claimed on failure. */ }
+        }
+        return committed
     }
 
     private fun read(language: String): JSONObject? {
