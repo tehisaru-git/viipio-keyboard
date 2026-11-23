@@ -24,4 +24,6 @@ Viipio is an experimental, offline Android keyboard for **Estonian and English**
 
 Viipio is experimental. Synthetic emulator checks do **not** establish real-finger swipe accuracy, latency or compatibility with every app. Keep another keyboard available and review important text before sending it.
 
-[Latest release and release notes](https://github.com/tehisaru-git/viipio-keyboard/releases/latest) · [Documentation](docs/TABLE_OF_CONTENTS.md) · [Build from source](docs/development/build-viipio.md) · [GPL-3.0 license](LICENSE) · [Credits and third-party notices](NOTICE)
+[Latest release and release notes](https://github.com/tehisaru-git/viipio-keyboard/releases/latest) · [Documentation](docs/TABLE_OF_CONTENTS.md) · [Build from source](docs/development/build-viipio.md)
+
+Viipio's source code is distributed under [GPL-3.0](LICENSE). [NOTICE](NOTICE) contains upstream and third-party attribution, including bundled data.

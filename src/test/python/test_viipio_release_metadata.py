@@ -37,8 +37,8 @@ class ViipioReleaseMetadataTest(unittest.TestCase):
         self.assertIn("https://github.com/tehisaru-git/viipio-keyboard/releases/latest", README)
         self.assertIn("io.github.tehisaru.viipio", README)
         self.assertIn("arm64-v8a", README)
-        self.assertIn("[GPL-3.0 license](LICENSE)", README)
-        self.assertIn("[Credits and third-party notices](NOTICE)", README)
+        self.assertIn("source code is distributed under [GPL-3.0](LICENSE)", README)
+        self.assertIn("[NOTICE](NOTICE)", README)
         self.assertNotRegex(README, r"\bv\d+\.\d+\.\d+\b")
         for obsolete in ("previously called", "Estonian Swipe", "No Gboard code",
                          "Pixel 8", "old package", "new Android app, not an in-place update"):
