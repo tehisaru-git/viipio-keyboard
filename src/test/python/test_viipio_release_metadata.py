@@ -1,7 +1,9 @@
 """Update compatibility and public artifact identity for the Viipio release."""
 from pathlib import Path
+import json
 import re
 import unittest
+from urllib.parse import parse_qs, unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parents[3]
 GRADLE = (ROOT / "build.gradle").read_text()
@@ -43,6 +45,25 @@ class ViipioReleaseMetadataTest(unittest.TestCase):
         for obsolete in ("previously called", "Estonian Swipe", "No Gboard code",
                          "Pixel 8", "old package", "new Android app, not an in-place update"):
             self.assertNotIn(obsolete, README)
+
+    def test_obtainium_shortcut_and_scannable_qr_have_correct_app_source(self):
+        match = re.search(r"\[Add Viipio to Obtainium\]\((https://apps\.obtainium\.imranr\.dev/redirect\?r=[^)]+)\)", README)
+        assert match is not None, 'README needs a clickable Obtainium shortcut'
+        deep_link = parse_qs(urlsplit(match.group(1)).query)['r'][0]
+        self.assertTrue(deep_link.startswith('obtainium://app/'))
+        config = json.loads(unquote(deep_link.removeprefix('obtainium://app/')))
+        self.assertEqual(config, {
+            'id': 'io.github.tehisaru.viipio',
+            'url': 'https://github.com/tehisaru-git/viipio-keyboard',
+            'author': 'tehisaru-git',
+            'name': 'Viipio keyboard',
+        })
+        qr = ROOT / 'docs/assets/viipio-obtainium-qr.png'
+        self.assertIn(f'<a href="{match.group(1)}"><img', README)
+        self.assertIn('src="docs/assets/viipio-obtainium-qr.png"', README)
+        self.assertIn('alt="Scan to add Viipio in Obtainium"', README)
+        self.assertTrue(qr.is_file())
+        self.assertEqual(qr.read_bytes()[:8], b'\x89PNG\r\n\x1a\n')
 
 
     def test_operational_install_scripts_target_new_app(self):
