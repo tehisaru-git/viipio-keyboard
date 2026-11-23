@@ -597,7 +597,13 @@ class ViipioInputMethodService : InputMethodService() {
             it.showKeyPreview = viipioOption(ViipioBehaviorPreference.KEY_POPUP)
             it.onGesture = ::handleGesture
         }
-        val container = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        // Allow the number-row preview to float into the existing 48 dp toolbar;
+        // no extra IME height, focusable window or touch target is created.
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            clipChildren = false
+            clipToPadding = false
+        }
         val dp = resources.displayMetrics.density
         val row = FrameLayout(this).apply { setBackgroundColor(view.palette.surface) }
         suggestionRow = row

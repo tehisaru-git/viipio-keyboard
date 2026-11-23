@@ -3,7 +3,9 @@ package tribixbite.cleverkeys.estonianui
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.view.MotionEvent
+import android.view.View
 import android.view.accessibility.AccessibilityNodeInfo
+import android.widget.LinearLayout
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -113,7 +115,7 @@ class KeyboardSurfaceViewTest {
         }
     }
 
-    @Test fun previewGlyphIsTrulyLargerThanTheKeyLabelAtPortraitWidthAndLargeFonts() {
+    @Test fun previewGlyphIsLegibleAndTheBubbleDoesNotGrowAcrossSeveralKeysAtLargeFonts() {
         val view = KeyboardSurfaceView(RuntimeEnvironment.getApplication())
         val density = view.resources.displayMetrics.density
         view.layout(0, 0, (360f * density).toInt(), (286f * density).toInt())
@@ -126,14 +128,109 @@ class KeyboardSurfaceViewTest {
                     view.onTouchEvent(it); it.recycle()
                 }
                 val ordinaryLabelSize = 24f * view.resources.displayMetrics.scaledDensity
-                assertTrue("popup must actually magnify at system font scale $scale",
-                    view.activeKeyPreviewTextSizePx!! >= ordinaryLabelSize * 1.35f)
+                if (scale == 1f) assertTrue("default popup must enlarge the ordinary key label",
+                    view.activeKeyPreviewTextSizePx!! >= ordinaryLabelSize * 1.15f)
+                assertTrue("large system fonts must not make a multi-key-sized popup",
+                    view.activeKeyPreviewRadiusPx!! <= 35f * density)
+                assertTrue("preview glyph must fit the popup",
+                    view.activeKeyPreviewTextSizePx!! <= view.activeKeyPreviewRadiusPx!! * 1.2f)
                 view.cancelActiveTouch()
             }
         } finally {
             view.cancelActiveTouch()
             view.resources.displayMetrics.scaledDensity = oldScaledDensity
         }
+    }
+
+    @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+    @Test fun letterPreviewUsesReferenceSizedBubbleAndRisesAboveThePressedKey() {
+        val view = KeyboardSurfaceView(RuntimeEnvironment.getApplication())
+        val density = view.resources.displayMetrics.density
+        view.layout(0, 0, (360f * density).toInt(), (286f * density).toInt())
+        val e = view.geometry.keys.single { it.kind == KeyKind.LETTER && it.label == "e" }.bounds
+        val sampleX = e.centerX.toInt()
+        val sampleY = (e.top - 51f * density).toInt()
+        fun pixel(): Int = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888).let {
+            view.draw(Canvas(it)); it.getPixel(sampleX, sampleY)
+        }
+        val before = pixel()
+        MotionEvent.obtain(1, 1, MotionEvent.ACTION_DOWN, e.centerX, e.centerY, 0).also {
+            view.onTouchEvent(it); it.recycle()
+        }
+        assertTrue("reference bubble radius is about 27 dp",
+            view.activeKeyPreviewRadiusPx!! in (26f * density)..(28f * density))
+        assertTrue("letter glyph size must be close to the observed preview, not 38 sp",
+            view.activeKeyPreviewTextSizePx!! in (27f * view.resources.displayMetrics.scaledDensity)..
+                (31f * view.resources.displayMetrics.scaledDensity))
+        assertNotEquals("popup must cover space well above the e key", before, pixel())
+        view.cancelActiveTouch()
+        assertEquals(before, pixel())
+    }
+
+    @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+    @Test fun firstRowDigitPreviewAppearsInTheToolbarAboveTheDigitKey() {
+        val context = RuntimeEnvironment.getApplication()
+        val view = KeyboardSurfaceView(context)
+        val density = view.resources.displayMetrics.density
+        val width = (360f * density).toInt()
+        val toolbarHeight = (48f * density).toInt()
+        val surfaceHeight = (286f * density).toInt()
+        val host = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            clipChildren = false
+            clipToPadding = false
+            addView(View(context).apply { setBackgroundColor(view.palette.surface) },
+                LinearLayout.LayoutParams(width, toolbarHeight))
+            addView(view, LinearLayout.LayoutParams(width, surfaceHeight))
+        }
+        host.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(toolbarHeight + surfaceHeight, View.MeasureSpec.EXACTLY))
+        host.layout(0, 0, width, toolbarHeight + surfaceHeight)
+        val two = view.geometry.keys.single { it.kind == KeyKind.NUMBER && it.label == "2" }.bounds
+        val sampleX = two.centerX.toInt()
+        val sampleY = toolbarHeight - (32f * density).toInt()
+        fun pixel(atY: Int = sampleY): Int = Bitmap.createBitmap(width, host.height, Bitmap.Config.ARGB_8888).let {
+            host.draw(Canvas(it)); it.getPixel(sampleX, atY)
+        }
+        val before = pixel()
+        val topMarginY = (2f * density).toInt()
+        val clearTopMargin = pixel(topMarginY)
+        MotionEvent.obtain(1, 1, MotionEvent.ACTION_DOWN, two.centerX, two.centerY, 0).also {
+            view.onTouchEvent(it); it.recycle()
+        }
+        assertNotEquals("number 2 popup must float over the row, not hide in its key", before, pixel())
+        assertEquals("first-row popup must not be clipped flat at the IME top edge",
+            clearTopMargin, pixel(topMarginY))
+        view.cancelActiveTouch()
+        assertEquals(before, pixel())
+    }
+
+    @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+    @Test fun pinDigitUsesPressedKeyFeedbackWithoutAFloatingPreview() {
+        val view = KeyboardSurfaceView(RuntimeEnvironment.getApplication())
+        val density = view.resources.displayMetrics.density
+        view.layout(0, 0, (360f * density).toInt(), (286f * density).toInt())
+        view.numericLayout = NumericLayout.PIN
+        val two = view.geometry.keys.single { it.kind == KeyKind.NUMBER && it.label == "2" }.bounds
+        val sampleX = (two.centerX + 18f * density).toInt()
+        val sampleY = two.centerY.toInt()
+        fun pixel(): Int = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888).let {
+            view.draw(Canvas(it)); it.getPixel(sampleX, sampleY)
+        }
+        val before = pixel()
+        val events = mutableListOf<SurfaceGesture>()
+        view.onGesture = events::add
+        MotionEvent.obtain(1, 1, MotionEvent.ACTION_DOWN, two.centerX, two.centerY, 0).also {
+            view.onTouchEvent(it); it.recycle()
+        }
+        assertNull("Gboard PIN shows pressed-key feedback, not a floating popup", view.activeKeyPreviewLabel)
+        assertNotEquals("PIN digit must darken while pressed", before, pixel())
+        assertTrue("visual feedback must not insert text on down", events.isEmpty())
+        MotionEvent.obtain(1, 40, MotionEvent.ACTION_UP, two.centerX, two.centerY, 0).also {
+            view.onTouchEvent(it); it.recycle()
+        }
+        assertEquals(before, pixel())
+        assertEquals("2", (events.single() as SurfaceGesture.Tap).key.label)
     }
 
     @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)

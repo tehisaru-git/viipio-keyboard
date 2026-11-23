@@ -84,27 +84,38 @@ class KeyboardSurfaceView @JvmOverloads constructor(
         stopRepeat()
         clearHold()
         clearKeyPreview()
+        clearNumericPressedKey()
         clearTrail()
         repeatStarted = false
         controller.cancel()
     }
     private val holdHandler = Handler(Looper.getMainLooper())
     private var previewKey: SurfaceKey? = null
+    private var pressedNumericKey: SurfaceKey? = null
+    private fun clearNumericPressedKey() {
+        if (pressedNumericKey != null) {
+            pressedNumericKey = null
+            invalidate()
+        }
+    }
     private fun previewLabel(key: SurfaceKey): String =
         if (key.kind == KeyKind.LETTER && shiftMode != ShiftMode.OFF && !symbolMode)
             key.label.uppercase(java.util.Locale.ROOT) else key.label
     internal val activeKeyPreviewLabel: String? get() = previewKey?.let(::previewLabel)
     private fun previewRadius(key: SurfaceKey): Float {
         val density = resources.displayMetrics.density
-        val fontScale = (resources.displayMetrics.scaledDensity / density).coerceAtLeast(1f)
-        return minOf(42f * density * fontScale, maxOf(32f * density * fontScale,
-            (key.bounds.right - key.bounds.left) * .55f),
+        return minOf(27f * density,
             (width - 8f * density).coerceAtLeast(1f) / 2f,
             (height - 8f * density).coerceAtLeast(1f) / 2f)
     }
     internal val activeKeyPreviewRadiusPx: Float? get() = previewKey?.let(::previewRadius)
     internal val activeKeyPreviewTextSizePx: Float? get() = previewKey?.let {
-        minOf(38f * resources.displayMetrics.scaledDensity, previewRadius(it) * 1.2f)
+        val radius = previewRadius(it)
+        val desiredSp = if (it.kind == KeyKind.SYMBOL) 25f else 29f
+        val size = minOf(desiredSp * resources.displayMetrics.scaledDensity, radius * 1.12f)
+        val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = Typeface.DEFAULT; textSize = size }
+        val width = labelPaint.measureText(previewLabel(it))
+        if (width > radius * 1.65f) size * radius * 1.65f / width else size
     }
     private var previewStartX = 0f
     private var previewStartY = 0f
@@ -337,6 +348,7 @@ class KeyboardSurfaceView @JvmOverloads constructor(
         stopRepeat()
         clearHold()
         clearKeyPreview()
+        clearNumericPressedKey()
         clearTrail()
         repeatStarted = false
         controller.cancel()
@@ -350,14 +362,19 @@ class KeyboardSurfaceView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         val colors = palette
-        canvas.drawColor(colors.surface)
+        // clipChildren=false allows the bubble to extend into the toolbar. Do not
+        // let the surface background overwrite the toolbar's buttons or candidates.
+        paint.style = Paint.Style.FILL
+        paint.color = colors.surface
+        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), paint)
         val density = resources.displayMetrics.density
         val inset = (3f * density).coerceAtMost(geometry.width / 120f)
         for (key in geometry.keys) {
             if (key.kind == KeyKind.SPACER) continue
             val b = key.bounds
             rect.set(b.left + inset, b.top + inset, b.right - inset, b.bottom - inset)
-            paint.color = when (key.kind) {
+            paint.color = if (numericLayout != null && key == pressedNumericKey)
+                colors.modifier else when (key.kind) {
                 KeyKind.ENTER -> colors.enter
                 KeyKind.SHIFT -> if (shiftMode == ShiftMode.OFF) colors.modifier else colors.enter
                 KeyKind.BACKSPACE, KeyKind.SYMBOLS, KeyKind.COMMA, KeyKind.PERIOD -> colors.modifier
@@ -414,8 +431,12 @@ class KeyboardSurfaceView @JvmOverloads constructor(
             val radius = previewRadius(key)
             val x = bounds.centerX.coerceIn(radius + 4f * density,
                 (width - radius - 4f * density).coerceAtLeast(radius + 4f * density))
-            val y = (bounds.top - radius * .12f).coerceIn(radius + 4f * density,
-                (height - radius - 4f * density).coerceAtLeast(radius + 4f * density))
+            // Match the observed ~54 dp above the *key centre*. The first digit row
+            // intentionally extends into the sibling toolbar, not over the number.
+            // The toolbar is the only available space above this view. Keep the
+            // first-row circle completely inside the IME window instead of flat-clipping it.
+            val y = (bounds.centerY - 54f * density).coerceAtLeast(
+                radius + 4f * density - top.toFloat())
             paint.style = Paint.Style.FILL
             paint.color = if (darkMode) 0xffe4eaf4.toInt() else 0xffdbe7fa.toInt()
             canvas.drawCircle(x, y, radius, paint)
@@ -508,6 +529,8 @@ class KeyboardSurfaceView @JvmOverloads constructor(
     private fun movePointer(x: Float, y: Float, timeMs: Long) {
         holdPointerX = x
         holdPointerY = y
+        if (pressedNumericKey != null && geometry.hit(x, y) != pressedNumericKey)
+            clearNumericPressedKey()
         previewKey?.let { key ->
             val threshold = maxOf(12f, (key.bounds.right - key.bounds.left) * .55f)
             if (geometry.hit(x, y) != key ||
@@ -549,7 +572,13 @@ class KeyboardSurfaceView @JvmOverloads constructor(
                 repeatStarted = false
                 controller.down(event.x, event.y, event.eventTime)
                 val touched = geometry.hit(event.x, event.y)
-                if (showKeyPreview && (touched?.kind == KeyKind.LETTER ||
+                if (numericLayout != null && (touched?.kind == KeyKind.NUMBER ||
+                        touched?.kind == KeyKind.SYMBOL)) {
+                    // Numeric editors show a pressed-key tint, not an enlarged PIN/digit.
+                    pressedNumericKey = touched
+                    invalidate()
+                }
+                if (showKeyPreview && numericLayout == null && (touched?.kind == KeyKind.LETTER ||
                         touched?.kind == KeyKind.NUMBER || touched?.kind == KeyKind.SYMBOL ||
                         touched?.kind == KeyKind.COMMA || touched?.kind == KeyKind.PERIOD)) {
                     previewKey = touched
@@ -586,6 +615,7 @@ class KeyboardSurfaceView @JvmOverloads constructor(
             MotionEvent.ACTION_UP -> {
                 stopRepeat()
                 clearKeyPreview()
+                clearNumericPressedKey()
                 val options = heldOptions
                 val key = heldKey
                 if (options != null && key != null) {
@@ -606,6 +636,7 @@ class KeyboardSurfaceView @JvmOverloads constructor(
                 stopRepeat()
                 clearHold()
                 clearKeyPreview()
+                clearNumericPressedKey()
                 repeatStarted = false
                 controller.cancel()
                 clearTrail()
@@ -618,6 +649,7 @@ class KeyboardSurfaceView @JvmOverloads constructor(
         stopRepeat()
         clearHold()
         clearKeyPreview()
+        clearNumericPressedKey()
         clearTrail()
         controller.cancel()
         super.onDetachedFromWindow()
