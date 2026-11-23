@@ -21,6 +21,11 @@ class ViipioBehaviorPreferenceTest {
         prefs.edit().putBoolean(ViipioBehaviorPreference.GLIDE_DELETE, false).commit()
         assertFalse(ViipioBehaviorPreference.enabled(prefs, ViipioBehaviorPreference.GLIDE_DELETE))
         assertTrue(ViipioBehaviorPreference.enabled(prefs, ViipioBehaviorPreference.CORNER_SYMBOLS))
+        assertTrue("Key pop-up must be enabled on an upgrade and a fresh install",
+            ViipioBehaviorPreference.enabled(prefs, "viipio_key_popup"))
+        prefs.edit().putBoolean("viipio_key_popup", false).commit()
+        assertFalse(ViipioBehaviorPreference.enabled(prefs, "viipio_key_popup"))
+        assertTrue(ViipioBehaviorPreference.enabled(prefs, ViipioBehaviorPreference.CORNER_SYMBOLS))
     }
 
     @Test fun wrongTypeOrUnknownKeyDoesNotSilentlyEnableAnUnknownAction() {

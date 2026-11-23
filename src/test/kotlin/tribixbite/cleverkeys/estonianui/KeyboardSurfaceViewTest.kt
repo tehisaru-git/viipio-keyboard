@@ -12,6 +12,208 @@ import org.robolectric.RuntimeEnvironment
 
 @RunWith(RobolectricTestRunner::class)
 class KeyboardSurfaceViewTest {
+    @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+    @Test fun ordinaryLetterShowsAKeyPreviewOnlyWhilePressedWithoutChangingItsTap() {
+        val view = KeyboardSurfaceView(RuntimeEnvironment.getApplication())
+        view.layout(0, 0, 660, 500)
+        val s = view.geometry.keys.single { it.label == "s" }.bounds
+        val density = view.resources.displayMetrics.density
+        val sampleX = s.centerX.toInt()
+        val sampleY = (s.top - 14f * density).toInt()
+        fun pixel(): Int = Bitmap.createBitmap(660, 500, Bitmap.Config.ARGB_8888).let {
+            view.draw(Canvas(it)); it.getPixel(sampleX, sampleY)
+        }
+        fun touch(action: Int, time: Long) = MotionEvent.obtain(1, time, action,
+            s.centerX.toFloat(), s.centerY.toFloat(), 0).also { view.onTouchEvent(it); it.recycle() }
+        val events = mutableListOf<SurfaceGesture>()
+        view.onGesture = events::add
+        val before = pixel()
+        touch(MotionEvent.ACTION_DOWN, 1)
+        assertNotEquals("large preview must appear above a held letter", before, pixel())
+        assertTrue("drawing alone must not insert text", events.isEmpty())
+        touch(MotionEvent.ACTION_UP, 40)
+        assertEquals("preview must disappear on release", before, pixel())
+        assertEquals("s", (events.single() as SurfaceGesture.Tap).key.label)
+    }
+
+    @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+    @Test fun digitsAndSymbolsAlsoPreviewTheActualTouchedCharacter() {
+        val view = KeyboardSurfaceView(RuntimeEnvironment.getApplication())
+        view.layout(0, 0, 660, 500)
+        val events = mutableListOf<SurfaceGesture>()
+        view.onGesture = events::add
+        fun inspect(label: String, kind: KeyKind) {
+            val b = view.geometry.keys.single { it.label == label && it.kind == kind }.bounds
+            val density = view.resources.displayMetrics.density
+            val y = if (b.top == 0) (14f * density).toInt() else (b.top - 14f * density).toInt()
+            val x = b.centerX.toInt()
+            fun pixel(): Int = Bitmap.createBitmap(660, 500, Bitmap.Config.ARGB_8888).let {
+                view.draw(Canvas(it)); it.getPixel(x, y)
+            }
+            val before = pixel()
+            for (action in listOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_UP)) {
+                MotionEvent.obtain(1, if (action == MotionEvent.ACTION_DOWN) 1 else 60,
+                    action, b.centerX, b.centerY, 0).also { event ->
+                    view.onTouchEvent(event)
+                    if (action == MotionEvent.ACTION_DOWN)
+                        assertNotEquals("$label must show an enlarged character", before, pixel())
+                    event.recycle()
+                }
+            }
+            assertEquals("$label preview must disappear", before, pixel())
+            assertEquals(label, (events.removeAt(0) as SurfaceGesture.Tap).key.label)
+        }
+        inspect("2", KeyKind.NUMBER)
+        inspect(",", KeyKind.COMMA)
+        inspect(".", KeyKind.PERIOD)
+        view.symbolMode = true
+        inspect("@", KeyKind.SYMBOL)
+    }
+
+    @Test fun previewLabelMatchesShiftedEstonianAndEnglishKeysAndClearsOnRelease() {
+        val view = KeyboardSurfaceView(RuntimeEnvironment.getApplication())
+        view.layout(0, 0, 660, 500)
+        view.shiftMode = ShiftMode.ONCE
+        fun inspect(label: String, preview: String) {
+            val b = view.geometry.keys.single { it.label == label }.bounds
+            for (action in listOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_UP)) {
+                MotionEvent.obtain(1, if (action == MotionEvent.ACTION_DOWN) 1 else 60,
+                    action, b.centerX, b.centerY, 0).also { event ->
+                    view.onTouchEvent(event)
+                    assertEquals(if (action == MotionEvent.ACTION_DOWN) preview else null,
+                        view.activeKeyPreviewLabel)
+                    event.recycle()
+                }
+            }
+        }
+        inspect("ä", "Ä")
+        view.language = KeyboardLanguage.ENGLISH
+        inspect("a", "A")
+        view.symbolMode = true
+        inspect("@", "@")
+    }
+
+    @Test fun previewTextFitsInsideItsCircleEvenWithVeryLargeSystemFont() {
+        val view = KeyboardSurfaceView(RuntimeEnvironment.getApplication())
+        view.layout(0, 0, 660, 500)
+        val density = view.resources.displayMetrics.density
+        val oldScaledDensity = view.resources.displayMetrics.scaledDensity
+        val s = view.geometry.keys.single { it.label == "s" }.bounds
+        try {
+            view.resources.displayMetrics.scaledDensity = density * 4f
+            MotionEvent.obtain(1, 1, MotionEvent.ACTION_DOWN, s.centerX, s.centerY, 0).also {
+                view.onTouchEvent(it); it.recycle()
+            }
+            val radius = view.activeKeyPreviewRadiusPx!!
+            assertTrue("preview text must stay within its bubble",
+                view.activeKeyPreviewTextSizePx!! <= radius * 1.2f)
+        } finally {
+            view.cancelActiveTouch()
+            view.resources.displayMetrics.scaledDensity = oldScaledDensity
+        }
+    }
+
+    @Test fun previewGlyphIsTrulyLargerThanTheKeyLabelAtPortraitWidthAndLargeFonts() {
+        val view = KeyboardSurfaceView(RuntimeEnvironment.getApplication())
+        val density = view.resources.displayMetrics.density
+        view.layout(0, 0, (360f * density).toInt(), (286f * density).toInt())
+        val oldScaledDensity = view.resources.displayMetrics.scaledDensity
+        val s = view.geometry.keys.single { it.label == "s" }.bounds
+        try {
+            for (scale in listOf(1f, 1.3f, 4f)) {
+                view.resources.displayMetrics.scaledDensity = density * scale
+                MotionEvent.obtain(1, 1, MotionEvent.ACTION_DOWN, s.centerX, s.centerY, 0).also {
+                    view.onTouchEvent(it); it.recycle()
+                }
+                val ordinaryLabelSize = 24f * view.resources.displayMetrics.scaledDensity
+                assertTrue("popup must actually magnify at system font scale $scale",
+                    view.activeKeyPreviewTextSizePx!! >= ordinaryLabelSize * 1.35f)
+                view.cancelActiveTouch()
+            }
+        } finally {
+            view.cancelActiveTouch()
+            view.resources.displayMetrics.scaledDensity = oldScaledDensity
+        }
+    }
+
+    @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+    @Test fun turningPreviewOffHidesItWithoutDisablingTapOrHeldAlternatives() {
+        val view = KeyboardSurfaceView(RuntimeEnvironment.getApplication())
+        view.layout(0, 0, 660, 500)
+        val m = view.geometry.keys.single { it.label == "m" }.bounds
+        val x = m.centerX.toInt()
+        val y = (m.top - 14f * view.resources.displayMetrics.density).toInt()
+        fun pixel(): Int = Bitmap.createBitmap(660, 500, Bitmap.Config.ARGB_8888).let {
+            view.draw(Canvas(it)); it.getPixel(x, y)
+        }
+        fun touch(action: Int, time: Long) = MotionEvent.obtain(1, time, action,
+            m.centerX, m.centerY, 0).also { view.onTouchEvent(it); it.recycle() }
+        val events = mutableListOf<SurfaceGesture>()
+        view.onGesture = events::add
+        val before = pixel()
+        view.showKeyPreview = false
+        touch(MotionEvent.ACTION_DOWN, 1)
+        assertEquals("off must not draw a key pop-up", before, pixel())
+        touch(MotionEvent.ACTION_UP, 40)
+        assertEquals("m", (events.single() as SurfaceGesture.Tap).key.label)
+        events.clear()
+        touch(MotionEvent.ACTION_DOWN, 100)
+        org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper())
+            .idleFor(300, java.util.concurrent.TimeUnit.MILLISECONDS)
+        assertEquals("?", view.activeLongPressValue)
+        touch(MotionEvent.ACTION_UP, 401)
+        assertEquals("?", (events.single() as SurfaceGesture.LongPress).value)
+    }
+
+    @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+    @Test fun cancelledTouchAndEditorTransitionImmediatelyRemoveKeyPreview() {
+        val view = KeyboardSurfaceView(RuntimeEnvironment.getApplication())
+        view.layout(0, 0, 660, 500)
+        val s = view.geometry.keys.single { it.label == "s" }.bounds
+        val x = s.centerX.toInt()
+        val y = (s.top - 14f * view.resources.displayMetrics.density).toInt()
+        fun pixel(): Int = Bitmap.createBitmap(660, 500, Bitmap.Config.ARGB_8888).let {
+            view.draw(Canvas(it)); it.getPixel(x, y)
+        }
+        fun touch(action: Int, time: Long) = MotionEvent.obtain(1, time, action,
+            s.centerX, s.centerY, 0).also { view.onTouchEvent(it); it.recycle() }
+        val before = pixel()
+        touch(MotionEvent.ACTION_DOWN, 1)
+        assertNotEquals(before, pixel())
+        touch(MotionEvent.ACTION_CANCEL, 40)
+        assertEquals(before, pixel())
+        touch(MotionEvent.ACTION_DOWN, 100)
+        assertNotEquals(before, pixel())
+        view.cancelActiveTouch()
+        assertEquals(before, pixel())
+        view.symbolMode = true
+        assertEquals(before, pixel())
+    }
+
+    @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+    @Test fun movingIntoAGlideRemovesPreviewWithoutChangingTheSwipe() {
+        val view = KeyboardSurfaceView(RuntimeEnvironment.getApplication())
+        view.layout(0, 0, 660, 500)
+        val s = view.geometry.keys.single { it.label == "s" }.bounds
+        val h = view.geometry.keys.single { it.label == "h" }.bounds
+        val x = s.centerX.toInt()
+        val y = (s.top - 14f * view.resources.displayMetrics.density).toInt()
+        fun pixel(): Int = Bitmap.createBitmap(660, 500, Bitmap.Config.ARGB_8888).let {
+            view.draw(Canvas(it)); it.getPixel(x, y)
+        }
+        fun touch(action: Int, bx: Float, by: Float, time: Long) =
+            MotionEvent.obtain(1, time, action, bx, by, 0).also { view.onTouchEvent(it); it.recycle() }
+        val events = mutableListOf<SurfaceGesture>()
+        view.onGesture = events::add
+        val before = pixel()
+        touch(MotionEvent.ACTION_DOWN, s.centerX, s.centerY, 1)
+        assertNotEquals(before, pixel())
+        touch(MotionEvent.ACTION_MOVE, h.centerX, h.centerY, 60)
+        assertEquals("preview must not linger when the trail starts", before, pixel())
+        touch(MotionEvent.ACTION_UP, h.centerX, h.centerY, 80)
+        assertTrue(events.single() is SurfaceGesture.Swipe)
+    }
+
     @Test fun activeSwipeDrawsAVisibleTrailAndReleaseClearsIt() {
         val view = KeyboardSurfaceView(RuntimeEnvironment.getApplication())
         view.layout(0, 0, 330, 250)

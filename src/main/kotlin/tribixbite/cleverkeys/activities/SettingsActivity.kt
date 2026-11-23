@@ -368,6 +368,7 @@ class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPreferen
     internal var viipioBackspaceWordUndo by mutableStateOf(true)
     internal var viipioGlideDelete by mutableStateOf(true)
     internal var viipioCornerSymbols by mutableStateOf(true)
+    internal var viipioKeyPopup by mutableStateOf(true)
     internal var diagnosticsEnabled by mutableStateOf<Boolean?>(null)
     internal var diagnosticsUnavailable by mutableStateOf(false)
     internal var autoSpaceBeforeSuggestion by mutableStateOf(Defaults.AUTO_SPACE_BEFORE_SUGGESTION)  // Add leading space before tapped suggestion

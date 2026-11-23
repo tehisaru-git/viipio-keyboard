@@ -113,6 +113,15 @@ internal fun SettingsActivity.SettingsScreen() {
             }
             "preferences" -> {
                 SettingsSwitch(
+                    title = stringResource(R.string.viipio_key_popup_title),
+                    description = stringResource(R.string.viipio_key_popup_desc),
+                    checked = viipioKeyPopup,
+                    onCheckedChange = {
+                        viipioKeyPopup = it
+                        saveSetting(ViipioBehaviorPreference.KEY_POPUP, it)
+                    }
+                )
+                SettingsSwitch(
                     title = stringResource(R.string.viipio_sentence_capital_title),
                     description = stringResource(R.string.viipio_sentence_capital_desc),
                     checked = viipioSentenceCapital,

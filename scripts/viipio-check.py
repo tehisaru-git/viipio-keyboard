@@ -20,6 +20,7 @@ TARGETED = (
     "tribixbite.cleverkeys.swipe.ctc.CtcLexiconMergeTest",
     "tribixbite.cleverkeys.estonianui.KeyboardSurfaceTest",
     "tribixbite.cleverkeys.estonianui.KeyboardSurfaceViewTest",
+    "tribixbite.cleverkeys.ViipioBehaviorPreferenceTest",
     "tribixbite.cleverkeys.ViipioTypedWordTrackerTest",
     "tribixbite.cleverkeys.ViipioTypedWordCaptureTest",
     "tribixbite.cleverkeys.ViipioCorrectionEvidenceTest",

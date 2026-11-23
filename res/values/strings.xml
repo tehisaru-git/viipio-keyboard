@@ -36,6 +36,8 @@
     <string name="viipio_glide_delete_desc" translatable="false">Turn off to disable this gesture; Backspace taps still work</string>
     <string name="viipio_corner_symbols_title" translatable="false">Corner symbol shortcuts</string>
     <string name="viipio_corner_symbols_desc" translatable="false">Show symbols on letter keys and offer them on long press; Estonian accents remain available</string>
+    <string name="viipio_key_popup_title" translatable="false">Key pop-up</string>
+    <string name="viipio_key_popup_desc" translatable="false">Show an enlarged letter, digit or symbol while touching its key. On by default; off keeps typing and long-press choices unchanged.</string>
     <string name="viipio_hold_duration_title" translatable="false">Touch and hold duration</string>
     <string name="viipio_hold_duration_desc" translatable="false">Wait before showing alternate characters. Default: 300 ms.</string>
     <string name="viipio_hold_duration_value" translatable="false">%1$d ms</string>

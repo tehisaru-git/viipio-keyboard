@@ -8,7 +8,9 @@ internal object ViipioBehaviorPreference {
     const val BACKSPACE_WORD_UNDO = "viipio_backspace_word_undo"
     const val GLIDE_DELETE = "viipio_glide_delete"
     const val CORNER_SYMBOLS = "viipio_corner_symbols"
-    private val keys = setOf(TYPED_SUGGESTIONS, BACKSPACE_WORD_UNDO, GLIDE_DELETE, CORNER_SYMBOLS)
+    const val KEY_POPUP = "viipio_key_popup"
+    private val keys = setOf(TYPED_SUGGESTIONS, BACKSPACE_WORD_UNDO, GLIDE_DELETE,
+        CORNER_SYMBOLS, KEY_POPUP)
 
     fun enabled(prefs: SharedPreferences, key: String): Boolean {
         if (key !in keys) return false

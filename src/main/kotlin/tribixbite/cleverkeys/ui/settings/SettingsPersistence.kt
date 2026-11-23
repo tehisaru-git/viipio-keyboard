@@ -57,6 +57,8 @@ internal fun SettingsActivity.handlePreferenceChanged(sharedPreferences: SharedP
                 viipioGlideDelete = ViipioBehaviorPreference.enabled(prefs, key)
             ViipioBehaviorPreference.CORNER_SYMBOLS ->
                 viipioCornerSymbols = ViipioBehaviorPreference.enabled(prefs, key)
+            ViipioBehaviorPreference.KEY_POPUP ->
+                viipioKeyPopup = ViipioBehaviorPreference.enabled(prefs, key)
             "continuous_swipe_enabled" -> { continuousSwipeEnabled = prefs.getSafeBoolean(key, Defaults.CONTINUOUS_SWIPE_ENABLED) }
             "swipe_typing_enabled" -> {
                 swipeTypingEnabled = prefs.getBoolean(key, Defaults.SWIPE_TYPING_ENABLED)
@@ -422,6 +424,7 @@ internal fun SettingsActivity.loadCurrentSettings() {
         viipioBackspaceWordUndo = ViipioBehaviorPreference.enabled(prefs, ViipioBehaviorPreference.BACKSPACE_WORD_UNDO)
         viipioGlideDelete = ViipioBehaviorPreference.enabled(prefs, ViipioBehaviorPreference.GLIDE_DELETE)
         viipioCornerSymbols = ViipioBehaviorPreference.enabled(prefs, ViipioBehaviorPreference.CORNER_SYMBOLS)
+        viipioKeyPopup = ViipioBehaviorPreference.enabled(prefs, ViipioBehaviorPreference.KEY_POPUP)
         autoSpaceBeforeSuggestion = prefs.getSafeBoolean("auto_space_before_suggestion", Defaults.AUTO_SPACE_BEFORE_SUGGESTION)
         showExactTypedWord = prefs.getSafeBoolean("show_exact_typed_word", Defaults.SHOW_EXACT_TYPED_WORD)
         backspaceUndoSwipe = prefs.getSafeBoolean("backspace_undo_swipe", Defaults.BACKSPACE_UNDO_SWIPE)

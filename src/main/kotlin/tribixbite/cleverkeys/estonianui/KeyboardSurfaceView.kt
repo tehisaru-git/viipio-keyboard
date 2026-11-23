@@ -50,6 +50,11 @@ class KeyboardSurfaceView @JvmOverloads constructor(
         set(value) {
             if (field != value) { field = value; clearHold(); invalidate() }
         }
+    var showKeyPreview = true
+        set(value) {
+            field = value
+            if (!value) clearKeyPreview()
+        }
     var holdDurationMs = 300
         set(value) { field = value.coerceIn(100, 700); clearHold() }
     internal var shiftMode = ShiftMode.OFF
@@ -78,11 +83,37 @@ class KeyboardSurfaceView @JvmOverloads constructor(
     fun cancelActiveTouch() {
         stopRepeat()
         clearHold()
+        clearKeyPreview()
         clearTrail()
         repeatStarted = false
         controller.cancel()
     }
     private val holdHandler = Handler(Looper.getMainLooper())
+    private var previewKey: SurfaceKey? = null
+    private fun previewLabel(key: SurfaceKey): String =
+        if (key.kind == KeyKind.LETTER && shiftMode != ShiftMode.OFF && !symbolMode)
+            key.label.uppercase(java.util.Locale.ROOT) else key.label
+    internal val activeKeyPreviewLabel: String? get() = previewKey?.let(::previewLabel)
+    private fun previewRadius(key: SurfaceKey): Float {
+        val density = resources.displayMetrics.density
+        val fontScale = (resources.displayMetrics.scaledDensity / density).coerceAtLeast(1f)
+        return minOf(42f * density * fontScale, maxOf(32f * density * fontScale,
+            (key.bounds.right - key.bounds.left) * .55f),
+            (width - 8f * density).coerceAtLeast(1f) / 2f,
+            (height - 8f * density).coerceAtLeast(1f) / 2f)
+    }
+    internal val activeKeyPreviewRadiusPx: Float? get() = previewKey?.let(::previewRadius)
+    internal val activeKeyPreviewTextSizePx: Float? get() = previewKey?.let {
+        minOf(38f * resources.displayMetrics.scaledDensity, previewRadius(it) * 1.2f)
+    }
+    private var previewStartX = 0f
+    private var previewStartY = 0f
+    private fun clearKeyPreview() {
+        if (previewKey != null) {
+            previewKey = null
+            invalidate()
+        }
+    }
     private var heldKey: SurfaceKey? = null
     private var heldOptions: LongPressOptions? = null
     private var heldIndex = 0
@@ -96,6 +127,7 @@ class KeyboardSurfaceView @JvmOverloads constructor(
         val options = key?.takeIf { geometry.hit(holdPointerX, holdPointerY) == it }
             ?.let { LongPressOptions.forKey(it, language, symbolMode, showCornerSymbols) }
         if (key != null && options != null) {
+            clearKeyPreview()
             heldOptions = options
             heldIndex = options.defaultIndex
             controller.cancel() // A held symbol must not become a swipe or ordinary tap.
@@ -304,6 +336,7 @@ class KeyboardSurfaceView @JvmOverloads constructor(
     private fun rebuild() {
         stopRepeat()
         clearHold()
+        clearKeyPreview()
         clearTrail()
         repeatStarted = false
         controller.cancel()
@@ -375,6 +408,22 @@ class KeyboardSurfaceView @JvmOverloads constructor(
                 trailPaint.strokeWidth = 4f * density
                 canvas.drawPath(trailSegment, trailPaint)
             }
+        }
+        previewKey?.let { key ->
+            val bounds = key.bounds
+            val radius = previewRadius(key)
+            val x = bounds.centerX.coerceIn(radius + 4f * density,
+                (width - radius - 4f * density).coerceAtLeast(radius + 4f * density))
+            val y = (bounds.top - radius * .12f).coerceIn(radius + 4f * density,
+                (height - radius - 4f * density).coerceAtLeast(radius + 4f * density))
+            paint.style = Paint.Style.FILL
+            paint.color = if (darkMode) 0xffe4eaf4.toInt() else 0xffdbe7fa.toInt()
+            canvas.drawCircle(x, y, radius, paint)
+            paint.color = 0xff202124.toInt()
+            paint.typeface = Typeface.DEFAULT
+            paint.textAlign = Paint.Align.CENTER
+            paint.textSize = activeKeyPreviewTextSizePx ?: 29f * resources.displayMetrics.scaledDensity
+            canvas.drawText(previewLabel(key), x, y - (paint.ascent() + paint.descent()) / 2f, paint)
         }
         val key = heldKey
         val options = heldOptions
@@ -459,6 +508,13 @@ class KeyboardSurfaceView @JvmOverloads constructor(
     private fun movePointer(x: Float, y: Float, timeMs: Long) {
         holdPointerX = x
         holdPointerY = y
+        previewKey?.let { key ->
+            val threshold = maxOf(12f, (key.bounds.right - key.bounds.left) * .55f)
+            if (geometry.hit(x, y) != key ||
+                Math.hypot((x - previewStartX).toDouble(), (y - previewStartY).toDouble()) >= threshold) {
+                clearKeyPreview()
+            }
+        }
         val key = heldKey
         val options = heldOptions
         if (key != null && options != null) {
@@ -488,10 +544,19 @@ class KeyboardSurfaceView @JvmOverloads constructor(
             MotionEvent.ACTION_DOWN -> {
                 stopRepeat()
                 clearHold()
+                clearKeyPreview()
                 clearTrail()
                 repeatStarted = false
                 controller.down(event.x, event.y, event.eventTime)
                 val touched = geometry.hit(event.x, event.y)
+                if (showKeyPreview && (touched?.kind == KeyKind.LETTER ||
+                        touched?.kind == KeyKind.NUMBER || touched?.kind == KeyKind.SYMBOL ||
+                        touched?.kind == KeyKind.COMMA || touched?.kind == KeyKind.PERIOD)) {
+                    previewKey = touched
+                    previewStartX = event.x
+                    previewStartY = event.y
+                    invalidate()
+                }
                 if (touched != null && LongPressOptions.forKey(touched, language, symbolMode,
                         showCornerSymbols) != null) {
                     heldKey = touched
@@ -520,6 +585,7 @@ class KeyboardSurfaceView @JvmOverloads constructor(
             }
             MotionEvent.ACTION_UP -> {
                 stopRepeat()
+                clearKeyPreview()
                 val options = heldOptions
                 val key = heldKey
                 if (options != null && key != null) {
@@ -539,6 +605,7 @@ class KeyboardSurfaceView @JvmOverloads constructor(
             MotionEvent.ACTION_CANCEL, MotionEvent.ACTION_POINTER_DOWN -> {
                 stopRepeat()
                 clearHold()
+                clearKeyPreview()
                 repeatStarted = false
                 controller.cancel()
                 clearTrail()
@@ -550,6 +617,7 @@ class KeyboardSurfaceView @JvmOverloads constructor(
     override fun onDetachedFromWindow() {
         stopRepeat()
         clearHold()
+        clearKeyPreview()
         clearTrail()
         controller.cancel()
         super.onDetachedFromWindow()

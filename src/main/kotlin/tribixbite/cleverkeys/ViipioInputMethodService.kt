@@ -594,6 +594,7 @@ class ViipioInputMethodService : InputMethodService() {
             it.language = taps.language
             it.shiftMode = taps.shiftMode
             it.showCornerSymbols = viipioOption(ViipioBehaviorPreference.CORNER_SYMBOLS)
+            it.showKeyPreview = viipioOption(ViipioBehaviorPreference.KEY_POPUP)
             it.onGesture = ::handleGesture
         }
         val container = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
@@ -943,6 +944,7 @@ class ViipioInputMethodService : InputMethodService() {
         refreshManualCompletions()
         surface?.onGesture = ::handleGesture
         surface?.showCornerSymbols = viipioOption(ViipioBehaviorPreference.CORNER_SYMBOLS)
+        surface?.showKeyPreview = viipioOption(ViipioBehaviorPreference.KEY_POPUP)
         surface?.language = taps.language
         surface?.shiftMode = taps.shiftMode
         applyInputLayout(info)
