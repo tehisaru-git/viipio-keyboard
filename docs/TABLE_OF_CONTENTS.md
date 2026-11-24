@@ -24,6 +24,6 @@ Viipio is an experimental offline Android keyboard with **Estonian (ET)** and **
 
 - [iPhone keyboard vs Android Gboard UX research](research/ios-keyboard-ux-viipio.md) — praised workflows, bounded differences, language limits, and feasible Viipio ideas; research, not a shipped feature.
 - [Android and iOS keyboard landscape for Viipio](research/mobile-keyboard-landscape-viipio.md) — product strengths, popularity caveats and feasible ET/EN ideas; research, not a shipped feature.
-- [Viipio Kompass — autonomous development plan (not activated)](plans/viipio-kompass.md) — Gboard-first priorities, interruptible stages, release gates and a later `/goal` launch command.
+- [Viipio Kompass — autonomous development plan](plans/viipio-kompass.md) and [current progress](plans/viipio-kompass-progress.md) — Gboard-first priorities, interruptible stages, release gates and current verified state.
 - [Gboard observation and prioritized feature backlog](plans/viipio-gboard-feature-backlog.md), [human swipe research](eval/human-swipe-research.md), [Estonian offline dictionary provenance](specs/estonian-offline-dictionary.md), and [language-distribution plan](plans/viipio-language-distribution.md). Plans are **not** shipped features.
 - [Inherited CleverKeys documentation](wiki/TABLE_OF_CONTENTS.md) and [archived upstream README](../UPSTREAM_README.md) are background records, not a description of Viipio's active keyboard. See [NOTICE](../NOTICE) for attribution.
