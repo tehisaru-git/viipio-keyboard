@@ -4,7 +4,7 @@ Viipio is an experimental, offline Android keyboard for **Estonian and English**
 
 ## Install with Obtainium
 
-Install [Obtainium](https://github.com/ImranR98/Obtainium) on your Android device if you do not have it yet.
+**First install Obtainium:** [Download the latest Obtainium APK (ARM64)](https://github.com/ImranR98/Obtainium/releases/latest/download/app-arm64-v8a-release.apk) from its official GitHub release. Open the downloaded APK and approve Android's installation prompt. If the direct download fails, use the [Obtainium release page](https://github.com/ImranR98/Obtainium/releases/latest) and choose the `app-arm64-v8a-release.apk` asset. Viipio's APK also requires ARM64.
 
 **On your phone:** [Add Viipio to Obtainium](https://apps.obtainium.imranr.dev/redirect?r=obtainium%3A%2F%2Fapp%2F%257B%2522id%2522%253A%2522io.github.tehisaru.viipio%2522%252C%2522url%2522%253A%2522https%253A%252F%252Fgithub.com%252Ftehisaru-git%252Fviipio-keyboard%2522%252C%2522author%2522%253A%2522tehisaru-git%2522%252C%2522name%2522%253A%2522Viipio%2520keyboard%2522%257D) — opens a confirmation in Obtainium, not an automatic APK install. **On another screen:** scan this QR code with your phone; it opens the same shortcut.
 

@@ -65,6 +65,15 @@ class ViipioReleaseMetadataTest(unittest.TestCase):
         self.assertTrue(qr.is_file())
         self.assertEqual(qr.read_bytes()[:8], b'\x89PNG\r\n\x1a\n')
 
+    def test_obtainium_first_install_links_to_latest_arm64_apk(self):
+        direct = ('[Download the latest Obtainium APK (ARM64)]('
+                  'https://github.com/ImranR98/Obtainium/releases/latest/download/'
+                  'app-arm64-v8a-release.apk)')
+        self.assertIn(direct, README)
+        self.assertLess(README.index(direct), README.index('[Add Viipio to Obtainium]'))
+        self.assertIn('[Obtainium release page](https://github.com/ImranR98/Obtainium/releases/latest)', README)
+        self.assertIn('Open the downloaded APK', README)
+
 
     def test_operational_install_scripts_target_new_app(self):
         termux = (ROOT / 'build-on-termux.sh').read_text()
