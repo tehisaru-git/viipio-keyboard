@@ -6,7 +6,7 @@ Viipio is an experimental offline Android keyboard with **Estonian (ET)** and **
 
 - [Install with Obtainium and feature overview](../README.md) — start here.
 - [Local diagnostics and privacy](eval/local-swipe-diagnostics.md) — consent, export, erasure and limits.
-- [Key pop-up behavior](specs/viipio-key-preview.md) and [synthetic screenshot](screenshots/v0.10.2-key-popup.png).
+- [Key pop-up behavior](specs/viipio-key-preview.md) and [v0.10.3 synthetic screenshot](screenshots/v0.10.3-key-feedback.png).
 
 ## Develop and verify
 
@@ -17,6 +17,7 @@ Viipio is an experimental offline Android keyboard with **Estonian (ET)** and **
 ## Release history
 
 - [All GitHub Releases](https://github.com/tehisaru-git/viipio-keyboard/releases) — choose a tag for its APK and version-specific changes.
+- [v0.10.3 release verification](releases/v0.10.3.md) — signed APK, tests, installed ET/EN/numeric/PIN feedback and public asset checks.
 - [Release verification records](releases/) — tests, signing and emulator evidence; older records describe their own historical scope, not today's capabilities.
 
 ## Research and plans

@@ -1,6 +1,6 @@
 # Viipio: key-press preview and numeric feedback
 
-**Initial preview:** shipped in v0.10.2 · **Measured geometry and numeric-editor refinement:** v0.10.3 candidate (NOT published in this source snapshot)
+**Initial preview:** shipped in v0.10.2 · **Measured geometry and numeric-editor refinement:** shipped in [v0.10.3](https://github.com/tehisaru-git/viipio-keyboard/releases/tag/v0.10.3)
 
 ## Purpose and reference
 
@@ -10,7 +10,7 @@ In a controlled emulator text editor, Gboard 18.6.3 with Preferences → Key tap
 
 1. A physical pointer-down on an ordinary ET/EN keyboard page's character key (letter, top-row digit, symbol or punctuation) draws an enlarged version of that key's current label near/above it, while it remains eligible for a short tap. Controls, Space, Backspace and Shift have no character pop-up. Dedicated PIN, integer, decimal, signed, phone and date/time pages instead temporarily shade the pressed digit/separator key, without a floating character bubble. The feedback is only visual; it must not insert text early, change shift, predictions, accessibility actions or create persistent input records. Letters respect the displayed shift state and the ET/EN keyboard page. Key pop-up is independently switchable in the active Viipio Settings → Preferences, **ON by default**; OFF means no floating preview, but never disables normal tap, numeric pressed-key shading or existing long-press alternatives.
 2. A glide, a move off the originating key, a completed long press, release, cancellation, second pointer, geometry/page/language change, editor change, view replacement or detachment removes the indicator. A held-choice popup wins over the short-tap preview. Existing swipe trail, hold timing (default 300 ms, user adjustable), Backspace repeat and committed characters must remain unchanged.
-3. The Viipio indicator is legible in light/dark modes, bounded horizontally at edge keys and uses the existing toolbar space for the top number row without adding input-window height or touch targets. Its circle should fit inside the visible IME top edge; the candidate toolbar's content and touch behavior remain unchanged. Avoid conflating the visual switch with separate sound/vibration or hold-duration controls.
+3. The Viipio indicator is legible in light/dark modes, bounded horizontally at edge keys and uses the existing toolbar space for the top number row without adding input-window height or touch targets. Its circle should fit inside the visible IME top edge; the toolbar's content and touch behavior remain unchanged. Avoid conflating the visual switch with separate sound/vibration or hold-duration controls.
 4. Keep existing privacy gates intact: the preview uses only the currently drawn key label and is never saved or sent anywhere. The bounded Gboard password-field observation displayed key pop-ups for short `s`/`a` taps; Viipio may show only the currently pressed label there, with no suggestions, diagnostics or editor-content access introduced. Test a synthetic sensitive editor for privacy regressions; this does not generalize to all OS/Gboard combinations.
 
 ## Implementation surface
@@ -22,3 +22,5 @@ In a controlled emulator text editor, Gboard 18.6.3 with Preferences → Key tap
 ## Acceptance
 
 Run targeted tests and the full Gradle/Python suites on the actual changed source. Install a freshly signed same-ID update on the shared emulator; verify ON/OFF in Settings, a transient preview during ET and EN taps and exact editor readback; check swipe, long-press and sensitive-editor regression. Restore the original emulator IME/foreground once, then publish a separate version/tag only after release checks and read back the public APK against the tested signed file. Human physical-device perception/latency remains unmeasured.
+
+The bounded release checks and their limitations are recorded in [v0.10.3 verification](../releases/v0.10.3.md).
